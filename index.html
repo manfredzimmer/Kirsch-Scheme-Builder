@@ -1,0 +1,2697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirsch Listing JSON</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script>
+        // Make Sortable available globally for Vue
+        window.Sortable = Sortable;
+    </script>
+    <style>
+        :root {
+            --bg-primary: #1a1814;
+            --bg-secondary: #242118;
+            --bg-tertiary: #2e2820;
+            --text-primary: #f5f0e8;
+            --text-secondary: #a89f94;
+            --text-muted: #6b635a;
+            --accent: #d4a853;
+            --accent-hover: #e8c278;
+            --accent-muted: #8a7238;
+            --danger: #c44536;
+            --danger-hover: #d9584a;
+            --border: #3d3528;
+            --border-light: #4a4235;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .font-display { font-family: 'Cormorant Garamond', serif; }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #app { position: relative; z-index: 1; }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(212, 168, 83, 0.25);
+        }
+        .btn-primary:hover::before { opacity: 1; }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-secondary:hover {
+            background: var(--border-light);
+            border-color: var(--border-light);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .btn-ghost:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .input-field {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(212, 168, 83, 0.1);
+        }
+        .input-field::placeholder { color: var(--text-muted); }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card:hover {
+            border-color: var(--border-light);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .breadcrumb-link {
+            color: var(--accent);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .breadcrumb-link:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+        .breadcrumb-current {
+            color: var(--text-primary);
+            cursor: default;
+        }
+        .breadcrumb-current:hover { text-decoration: none; }
+
+        .searchable-select-dropdown {
+            position: absolute;
+            z-index: 50;
+            max-height: 200px;
+            overflow-y: auto;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+        }
+        .searchable-select-dropdown::-webkit-scrollbar { width: 6px; }
+        .searchable-select-dropdown::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        .searchable-select-dropdown::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .toggle-btn {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .toggle-btn.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+        .toggle-btn:hover:not(.active) {
+            border-color: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        .icon-btn { color: var(--text-muted); transition: all 0.2s; }
+        .icon-btn:hover { color: var(--text-primary); }
+
+        .lang-tag {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .modal-title { font-family: 'Cormorant Garamond', serif; font-weight: 600; }
+
+        .tree-line {
+            position: relative;
+        }
+        .tree-line::before {
+            content: '';
+            position: absolute;
+            left: 16px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: var(--border);
+        }
+        .tree-line:last-child::before { display: none; }
+        .tree-connector {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            width: 16px;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .field-card-enter { animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade { animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .animate-slide { animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+        .accordion-content {
+            overflow: hidden;
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sortable-drag {
+            opacity: 0.5;
+        }
+        .sortable-ghost {
+            opacity: 0.3;
+            background: var(--bg-tertiary);
+        }
+
+        .selected-category {
+            background: rgba(212, 168, 83, 0.1) !important;
+            border-left: 3px solid var(--accent) !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div id="app" class="min-h-screen relative flex flex-col">
+        <!-- Initial State -->
+        <div v-if="!hasProject" class="flex flex-col items-center justify-center min-h-screen px-6">
+            <div class="text-center animate-fade">
+                <h1 class="font-display text-5xl md:text-7xl text-amber-50 mb-4 tracking-tight">Kirsch</h1>
+                <p class="text-[#a89f94] text-lg mb-12 max-w-md">Formular Schema Builder</p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button @click="newProject" class="btn-primary px-8 py-4 rounded-xl text-lg">
+                        Neues Projekt
+                    </button>
+                    <button @click="triggerImport" class="btn-secondary px-8 py-4 rounded-xl text-lg">
+                        ZIP Importieren
+                    </button>
+                </div>
+            </div>
+            <input type="file" ref="fileInput" @change="handleFileImport" accept=".zip" class="hidden">
+        </div>
+
+        <!-- Main UI -->
+        <div v-else class="flex flex-col min-h-screen">
+            <!-- Header -->
+            <header class="bg-[#242118] border-b border-[#3d3528] px-6 py-4 flex items-center justify-between shrink-0">
+                <h1 class="font-display text-2xl text-amber-50">{{ projectName }}</h1>
+                <div class="flex gap-3">
+                    <button @click="showLanguageModal = true" class="btn-ghost px-4 py-2 rounded-lg">
+                        <i class="fas fa-language mr-2"></i>Sprachen
+                    </button>
+                    <button @click="saveProject" class="btn-primary px-4 py-2 rounded-lg">
+                        <i class="fas fa-save mr-2"></i>Speichern
+                    </button>
+                </div>
+            </header>
+
+            <!-- Two-Column Body -->
+            <div class="flex flex-1 overflow-hidden">
+                <!-- Left Panel: Category Tree -->
+                <aside class="w-80 border-r border-[#3d3528] flex flex-col bg-[#1a1814] shrink-0">
+                    <div class="px-4 py-3 border-b border-[#3d3528] flex items-center justify-between">
+                        <h2 class="font-display text-lg text-amber-50">Kategorien</h2>
+                        <div class="flex gap-1">
+                            <button @click="sortRootCategories" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]" title="Alphabetisch sortieren">
+                                <i class="fas fa-sort-alpha-down"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-2">
+                        <div v-if="flatTree.length === 0" class="text-center text-[#6b635a] py-8">
+                            <i class="fas fa-folder-open text-3xl mb-3 opacity-50"></i>
+                            <p class="text-sm">Keine Kategorien</p>
+                        </div>
+                        <div v-else ref="treeContainer" class="space-y-0.5">
+                            <div v-for="node in flatTree" :key="node.id"
+                                :data-id="node.id"
+                                :class="['flex items-center gap-1 px-2 py-1.5 rounded-lg cursor-pointer transition-all group',
+                                    node.id === selectedCategoryId ? 'selected-category bg-[rgba(212,168,83,0.08)]' : 'hover:bg-[#2e2820]']"
+                                :style="{ paddingLeft: (12 + node.depth * 20) + 'px' }">
+                                <button @click.stop="toggleCategoryExpand(node.id)"
+                                    class="w-5 h-5 flex items-center justify-center shrink-0 text-[#6b635a] hover:text-[#a89f94] transition">
+                                    <i v-if="node.hasChildren && node.isExpanded" class="fas fa-chevron-down text-xs"></i>
+                                    <i v-else-if="node.hasChildren" class="fas fa-chevron-right text-xs"></i>
+                                    <i v-else class="fas fa-circle text-[4px]"></i>
+                                </button>
+                                <span class="flex-1 text-sm truncate flex items-center gap-1"
+                                    @click="selectCategory(node.id)">
+                                    {{ getTranslationText(node.translationId) }}
+                                    <i v-if="getEntityWarningType('category', node.id) === 'missing'"
+                                        class="fas fa-exclamation-triangle text-[#c44536] text-[10px] shrink-0"
+                                        :title="'Fehlende Übersetzungen: ' + getMissingLanguages(node.translationId).join(', ')">
+                                    </i>
+                                    <i v-else-if="getEntityWarningType('category', node.id) === 'children-missing'"
+                                        class="fas fa-exclamation-triangle text-[#d4a853] text-[10px] shrink-0"
+                                        title="Untergeordnete haben fehlende Übersetzungen">
+                                    </i>
+                                </span>
+                                <span class="text-[10px] text-[#6b635a] px-1.5 py-0.5 rounded bg-[#242118] shrink-0">
+                                    {{ getChildCount(node.id) }}
+                                </span>
+                                <button @click.stop="openEditCategory(node)"
+                                    class="icon-btn p-1 rounded hover:bg-[#3d3528] opacity-0 group-hover:opacity-100 transition text-xs">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                <button @click.stop="confirmDelete('category', node)"
+                                    class="icon-btn p-1 rounded hover:bg-[#3d3528] text-[#c44536] opacity-0 group-hover:opacity-100 transition text-xs">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-3 border-t border-[#3d3528]">
+                        <button @click="openAddCategory" class="btn-primary w-full px-4 py-2.5 rounded-lg text-sm">
+                            <i class="fas fa-plus mr-2"></i>Kategorie hinzufügen
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- Right Panel: Detail -->
+                <main class="flex-1 flex flex-col bg-[#1a1814]">
+                    <div v-if="!selectedCategoryId" class="flex-1 flex items-center justify-center text-[#6b635a]">
+                        <div class="text-center animate-fade">
+                            <i class="fas fa-arrow-left text-4xl mb-4 opacity-50"></i>
+                            <p>Wähle eine Kategorie aus</p>
+                        </div>
+                    </div>
+                    <template v-else>
+                        <!-- Breadcrumb -->
+                        <div class="px-6 py-3 border-b border-[#3d3528] flex items-center gap-2 flex-wrap shrink-0">
+                            <span class="flex items-center">
+                                <span @click="selectedCategoryId = null" class="breadcrumb-link text-sm">Root</span>
+                            </span>
+                            <span v-for="(crumb, index) in currentBreadcrumbs" :key="crumb.id" class="flex items-center text-sm">
+                                <span class="mx-2 text-[#6b635a]">&gt;</span>
+                                <span @click="selectCategory(crumb.id)"
+                                    :class="crumb.id === selectedCategoryId ? 'breadcrumb-current font-medium' : 'breadcrumb-link'">
+                                    {{ crumb.name }}
+                                    <i v-if="getEntityWarningType('category', crumb.id) === 'missing'"
+                                        class="fas fa-exclamation-triangle text-[#c44536] text-[10px] ml-1"
+                                        :title="'Fehlende Übersetzungen: ' + getMissingLanguages(crumb.translationId).join(', ')">
+                                    </i>
+                                    <i v-else-if="getEntityWarningType('category', crumb.id) === 'children-missing'"
+                                        class="fas fa-exclamation-triangle text-[#d4a853] text-[10px] ml-1"
+                                        title="Untergeordnete haben fehlende Übersetzungen">
+                                    </i>
+                                </span>
+                            </span>
+                        </div>
+
+                        <!-- Category Info + Actions -->
+                        <div class="px-6 py-3 border-b border-[#3d3528] flex items-center justify-between shrink-0">
+                            <div>
+                                <h2 class="font-display text-xl text-amber-50 flex items-center gap-2">
+                                    {{ selectedCategoryName }}
+                                    <i v-if="selectedCategory && getEntityWarningType('category', selectedCategory.id) === 'missing'"
+                                        class="fas fa-exclamation-triangle text-[#c44536] text-sm"
+                                        :title="'Fehlende Übersetzungen: ' + getMissingLanguages(selectedCategory.translationId).join(', ')">
+                                    </i>
+                                    <i v-else-if="selectedCategory && getEntityWarningType('category', selectedCategory.id) === 'children-missing'"
+                                        class="fas fa-exclamation-triangle text-[#d4a853] text-sm"
+                                        title="Untergeordnete haben fehlende Übersetzungen">
+                                    </i>
+                                </h2>
+                                <p v-if="selectedCategory" class="text-xs text-[#6b635a] mt-0.5">
+                                    Level {{ selectedCategory.level }} · 
+                                    {{ currentFields.length }} Feld(er) · 
+                                    {{ getChildCount(selectedCategory.id) }} Unterkategorie(n)
+                                </p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button @click="openEditCategory(selectedCategory)" class="btn-ghost px-3 py-1.5 rounded-lg text-sm">
+                                    <i class="fas fa-pen mr-1"></i>Bearbeiten
+                                </button>
+                                <button @click="sortFields" class="btn-ghost px-3 py-1.5 rounded-lg text-sm">
+                                    <i class="fas fa-sort-alpha-down mr-1"></i>Sortieren
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Fields List -->
+                        <div class="flex-1 overflow-y-auto p-6">
+                            <div v-if="currentFields.length === 0" class="text-center text-[#6b635a] py-16">
+                                <i class="fas fa-cubes text-4xl mb-4 opacity-50"></i>
+                                <p>Keine Felder in dieser Kategorie</p>
+                                <button @click="openAddField" class="btn-primary px-5 py-2.5 rounded-lg mt-4 text-sm">
+                                    <i class="fas fa-plus mr-2"></i>Feld hinzufügen
+                                </button>
+                            </div>
+                            <div v-else class="space-y-3 field-sortable-container">
+                                <div v-for="(field, fi) in currentFields" :key="field.id"
+                                    :data-field-id="field.id"
+                                    class="card rounded-xl overflow-hidden animate-fade">
+                                    <!-- Field Header (always visible) -->
+                                    <div @click="toggleFieldExpand(field.id)"
+                                        class="flex items-center gap-3 px-5 py-3.5 cursor-pointer hover:bg-[#2e2820] transition">
+                                        <i class="fas fa-grip-vertical text-[#6b635a] cursor-grab handle-field"></i>
+                                        <button @click.stop="toggleFieldExpand(field.id)" class="w-4 text-center text-[#6b635a]">
+                                            <i :class="expandedFieldIds.has(field.id) ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="text-xs"></i>
+                                        </button>
+                                        <i :class="fieldTypeIcon(field.type)" class="text-[#a89f94] w-4 text-center text-xs"></i>
+                                        <span class="flex-1 text-sm font-medium flex items-center gap-1">
+                                            {{ getTranslationText(field.translationId) }}
+                                            <i v-if="getEntityWarningType('field', field.id) === 'missing'"
+                                                class="fas fa-exclamation-triangle text-[#c44536] text-[10px]"
+                                                :title="'Fehlende Übersetzungen: ' + getMissingLanguages(field.translationId).join(', ')">
+                                            </i>
+                                            <i v-else-if="getEntityWarningType('field', field.id) === 'children-missing'"
+                                                class="fas fa-exclamation-triangle text-[#d4a853] text-[10px]"
+                                                title="Optionen haben fehlende Übersetzungen">
+                                            </i>
+                                        </span>
+                                        <span class="text-[10px] px-2 py-0.5 rounded-full"
+                                            :class="field.required ? 'bg-[#d4a853] text-[#1a1814]' : 'bg-[#2e2820] text-[#6b635a]'">
+                                            {{ field.required ? 'Pflicht' : 'Optional' }}
+                                        </span>
+                                        <span class="text-[10px] px-2 py-0.5 rounded bg-[#242118] text-[#6b635a] uppercase tracking-wider">{{ field.type }}</span>
+                                        <i v-if="getVisibleFieldDependency(field.id)"
+                                            class="fas fa-link text-[#d4a853] text-[10px]"
+                                            :title="'Abhängig von: ' + getDependencySourceName(getDependencySourceFieldId(getVisibleFieldDependency(field.id)))">
+                                        </i>
+                                        <button @click.stop="openCopyModal(field)"
+                                            class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-xs">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                        <button @click.stop="openEditField(field)"
+                                            class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-xs">
+                                            <i class="fas fa-pen"></i>
+                                        </button>
+                                        <button @click.stop="confirmDelete('field', field)"
+                                            class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-[#c44536] text-xs">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Field Expanded Content -->
+                                    <div v-if="expandedFieldIds.has(field.id)" class="border-t border-[#3d3528] px-5 py-4 space-y-4">
+                                        <!-- Name Translation -->
+                                        <div>
+                                            <label class="block text-xs text-[#a89f94] mb-1.5">Feldname</label>
+                                            <div class="flex items-center gap-2">
+                                                <div class="flex-1 space-y-1">
+                                                    <div v-for="lang in languages" :key="lang" class="flex items-center gap-2">
+                                                        <span class="text-[10px] text-[#6b635a] w-6 uppercase">{{ lang }}</span>
+                                                        <input :value="getTranslationValue(field.translationId, lang)"
+                                                            @input="updateTranslation(field.translationId, lang, $event.target.value)"
+                                                            class="input-field w-full px-3 py-1.5 rounded-lg text-sm"
+                                                            :placeholder="'Enter ' + lang">
+                                                    </div>
+                                                </div>
+                                                <button @click="openTranslationPicker('fieldName', field)"
+                                                    class="btn-ghost p-1.5 rounded text-xs" title="Übersetzung auswählen">
+                                                    <i class="fas fa-language"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Placeholder Translation -->
+                                        <div>
+                                            <label class="block text-xs text-[#a89f94] mb-1.5">Platzhalter</label>
+                                            <div class="flex items-center gap-2">
+                                                <div class="flex-1 space-y-1">
+                                                    <div v-for="lang in languages" :key="lang" class="flex items-center gap-2">
+                                                        <span class="text-[10px] text-[#6b635a] w-6 uppercase">{{ lang }}</span>
+                                                        <input :value="getTranslationValue(field.placeholderTranslationId, lang)"
+                                                            @input="updateTranslation(field.placeholderTranslationId, lang, $event.target.value)"
+                                                            class="input-field w-full px-3 py-1.5 rounded-lg text-sm"
+                                                            :placeholder="'Enter ' + lang">
+                                                    </div>
+                                                </div>
+                                                <button @click="openTranslationPicker('fieldPlaceholder', field)"
+                                                    class="btn-ghost p-1.5 rounded text-xs" title="Übersetzung auswählen">
+                                                    <i class="fas fa-language"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Type (editable) -->
+                                        <div>
+                                            <label class="block text-xs text-[#a89f94] mb-1.5">Typ</label>
+                                            <div class="flex rounded-xl overflow-hidden border border-[#3d3528] w-fit">
+                                                <button v-for="t in fieldTypes" :key="t"
+                                                    @click="changeFieldType(field, t)"
+                                                    :class="['px-4 py-1.5 text-xs transition', field.type === t ? 'btn-primary' : 'toggle-btn']">
+                                                    {{ t }}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Config per type -->
+                                        <div v-if="fieldConfigFields(field).length > 0">
+                                            <label class="block text-xs text-[#a89f94] mb-1.5">Konfiguration</label>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div v-for="cfg in fieldConfigFields(field)" :key="cfg.key" class="flex items-center gap-2">
+                                                    <span class="text-xs text-[#6b635a] w-20">{{ cfg.label }}</span>
+                                                    <input v-if="cfg.type === 'number'"
+                                                        :value="field.config?.[cfg.key] ?? ''"
+                                                        @input="updateFieldConfig(field, cfg.key, Number($event.target.value) || '')"
+                                                        type="number" :step="cfg.step || 'any'"
+                                                        class="input-field flex-1 px-2 py-1 rounded text-xs">
+                                                    <input v-else-if="cfg.type === 'checkbox'"
+                                                        :checked="field.config?.[cfg.key] ?? false"
+                                                        @change="updateFieldConfig(field, cfg.key, $event.target.checked)"
+                                                        type="checkbox" class="accent-[#d4a853]">
+                                                    <input v-else
+                                                        :value="field.config?.[cfg.key] ?? ''"
+                                                        @input="updateFieldConfig(field, cfg.key, $event.target.value)"
+                                                        class="input-field flex-1 px-2 py-1 rounded text-xs">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Required toggle -->
+                                        <div class="flex items-center gap-2">
+                                            <input :checked="field.required"
+                                                @change="field.required = $event.target.checked"
+                                                type="checkbox" class="accent-[#d4a853]">
+                                            <label class="text-xs text-[#a89f94]">Required</label>
+                                        </div>
+
+                                        <!-- Field dependency -->
+                                        <div class="bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-2">
+                                            <div class="flex items-center justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <label class="block text-xs text-[#a89f94] mb-1">Abhängigkeit</label>
+                                                    <div v-if="getVisibleFieldDependency(field.id)"
+                                                        class="flex items-center gap-2 text-xs text-[#a89f94]">
+                                                        <i class="fas fa-arrow-right text-[#6b635a]"></i>
+                                                        <span>Wird angezeigt, wenn <strong class="text-amber-50">{{ getDependencySourceName(getDependencySourceFieldId(getVisibleFieldDependency(field.id))) }}</strong> ausgefüllt ist</span>
+                                                        <button @click="removeDependency(getVisibleFieldDependency(field.id).id)"
+                                                            class="text-[#c44536] hover:text-[#d9584a] ml-1">
+                                                            <i class="fas fa-times-circle"></i>
+                                                        </button>
+                                                    </div>
+                                                    <div v-else class="text-xs text-[#6b635a]">Keine Abhängigkeit</div>
+                                                </div>
+                                                <button @click="openAddDependency(field)"
+                                                    class="text-xs text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
+                                                    <i class="fas fa-plus-circle mr-1"></i>{{ getVisibleFieldDependency(field.id) ? 'Ändern' : 'Abhängigkeit' }}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Options (for select type) -->
+                                        <div v-if="field.type === 'select'">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <label class="text-xs text-[#a89f94]">Optionen</label>
+                                                <div class="flex gap-2">
+                                                    <button @click="sortOptions(field)" class="btn-ghost px-2 py-1 rounded text-xs">
+                                                        <i class="fas fa-sort-alpha-down mr-1"></i>Sortieren
+                                                    </button>
+                                                    <button @click="openAddOption(field)" class="btn-primary px-3 py-1 rounded text-xs">
+                                                        <i class="fas fa-plus mr-1"></i>Option
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div v-if="getFieldOptionsList(field.id).length === 0" class="text-center text-[#6b635a] py-6 text-sm">
+                                                Keine Optionen
+                                            </div>
+                                            <div v-else class="space-y-1.5 option-sortable-container">
+                                                <div v-for="opt in getFieldOptionsList(field.id)" :key="opt.id"
+                                                    :data-opt-id="opt.id"
+                                                    class="bg-[#242118] border border-[#3d3528] rounded-lg overflow-hidden">
+                                                    <!-- Option header -->
+                                                    <div class="flex items-center gap-2 px-3 py-2">
+                                                        <i class="fas fa-grip-vertical text-[#6b635a] text-xs cursor-grab handle-option"></i>
+                                                        <div class="flex-1 flex items-center gap-2">
+                                                            <input :value="getTranslationText(opt.labelTranslationId)"
+                                                                @input="updateTranslation(opt.labelTranslationId, 'de', $event.target.value)"
+                                                                class="input-field flex-1 px-2 py-1 rounded text-xs bg-[#1a1814]"
+                                                                placeholder="Label (DE)">
+                                                            <span class="text-[10px] text-[#6b635a]">slug:</span>
+                                                            <input v-model="opt.value"
+                                                                class="input-field w-24 px-2 py-1 rounded text-xs bg-[#1a1814] font-mono"
+                                                                placeholder="value">
+                                                            <i v-if="getEntityWarningType('option', opt.id) === 'missing'"
+                                                                class="fas fa-exclamation-triangle text-[#c44536] text-[10px]"
+                                                                :title="'Fehlende Übersetzungen: ' + getMissingLanguages(opt.labelTranslationId).join(', ')">
+                                                            </i>
+                                                            <button @click="openEditOption(opt)"
+                                                                class="icon-btn p-1 rounded hover:bg-[#3d3528] text-xs">
+                                                                <i class="fas fa-pen"></i>
+                                                            </button>
+                                                        </div>
+                                                        <button @click="confirmDelete('option', opt)"
+                                                            class="icon-btn p-1 rounded hover:bg-[#3d3528] text-[#c44536] text-xs">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                    <!-- Option filters for this option -->
+                                                    <div class="px-3 pb-2 pl-8">
+                                                        <div v-for="fgroup in getOptionFilterDisplay(opt.id)" :key="'of-' + fgroup.fieldId"
+                                                            class="flex items-center gap-2 text-xs text-[#a89f94] mb-1 mt-1">
+                                                            <i class="fas fa-filter text-[#6b635a]"></i>
+                                                            <span>Filtere Optionen in <strong class="text-amber-50">{{ fgroup.fieldName }}</strong>:
+                                                                <span v-for="(o, oi) in fgroup.options" :key="o.id">
+                                                                    {{ o.label }}<span v-if="oi < fgroup.options.length - 1">, </span>
+                                                                </span>
+                                                            </span>
+                                                            <button @click="removeOptionDepGroup(opt.id, fgroup.fieldId)"
+                                                                class="text-[#c44536] hover:text-[#d9584a] ml-1" title="Alle entfernen">
+                                                                <i class="fas fa-times-circle"></i>
+                                                            </button>
+                                                        </div>
+                                                        <button @click="openOptionFilterModal(opt)"
+                                                            class="text-xs text-[#d4a853] hover:text-[#e8c278] transition">
+                                                            <i class="fas fa-plus-circle mr-1"></i>Optionen filtern
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Add Field Button (at bottom of list) -->
+                                <button @click="openAddField"
+                                    class="w-full border-2 border-dashed border-[#3d3528] rounded-xl py-4 text-[#6b635a] hover:border-[#d4a853] hover:text-[#d4a853] transition">
+                                    <i class="fas fa-plus mr-2"></i>Feld hinzufügen
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </main>
+            </div>
+        </div>
+
+        <!-- ─── MODALS ─── -->
+
+        <!-- Add/Edit Category Modal -->
+        <div v-if="showCategoryModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between">
+                    <h2 class="modal-title text-2xl">{{ editingCategory ? 'Kategorie bearbeiten' : 'Kategorie hinzufügen' }}</h2>
+                    <button @click="closeCategoryModal" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5 space-y-5">
+                    <div>
+                        <label class="block text-sm text-[#a89f94] mb-2">Name</label>
+                        <div class="flex rounded-xl overflow-hidden border border-[#3d3528] mb-3">
+                            <button @click="catTransMode = 'new'" :class="['flex-1 px-4 py-2 text-sm transition', catTransMode === 'new' ? 'btn-primary' : 'toggle-btn']">Erstellen</button>
+                            <button @click="catTransMode = 'existing'" :class="['flex-1 px-4 py-2 text-sm transition', catTransMode === 'existing' ? 'btn-primary' : 'toggle-btn']">Vorhandenes</button>
+                        </div>
+                        <div v-if="catTransMode === 'new'">
+                            <div v-for="lang in languages" :key="lang" class="mb-2">
+                                <label class="block text-xs text-[#6b635a] mb-0.5 uppercase">{{ lang }}</label>
+                                <input v-model="catTransNew[lang]" type="text"
+                                    class="input-field w-full px-4 py-2 rounded-lg text-sm" :placeholder="lang">
+                            </div>
+                        </div>
+                        <div v-else class="relative">
+                            <input v-model="catTransSearch" type="text" placeholder="Übersetzung suchen..."
+                                class="input-field w-full px-4 py-2 rounded-lg text-sm"
+                                @focus="catShowTransDropdown = true">
+                            <div v-if="catShowTransDropdown" class="searchable-select-dropdown w-full rounded-lg mt-1">
+                                <div v-for="t in filteredCatTranslations" :key="t.id" @click="selectCatTranslation(t)"
+                                    class="px-4 py-2 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0 text-sm">
+                                    <span class="text-amber-50">{{ t.translation.de }}</span>
+                                    <span v-if="t.translation.en" class="text-[#6b635a] ml-2">({{ t.translation.en }})</span>
+                                </div>
+                                <div v-if="filteredCatTranslations.length === 0" class="px-4 py-2 text-[#6b635a] text-sm">Keine</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-[#a89f94] mb-2">Übergeordnete Kategorie</label>
+                        <div class="relative">
+                            <input v-model="catParentSearch" type="text" placeholder="Suche Kategorie..."
+                                class="input-field w-full px-4 py-2 rounded-lg text-sm"
+                                @focus="catShowParentDropdown = true">
+                            <div v-if="catShowParentDropdown" class="searchable-select-dropdown w-full rounded-lg mt-1">
+                                <div @click="selectCatParent(null)" class="px-4 py-2 hover:bg-[#3d3528] cursor-pointer text-[#6b635a] border-b border-[#3d3528] text-sm">
+                                    (Root)
+                                </div>
+                                <div v-for="c in filteredCatParents" :key="c.id" @click="selectCatParent(c)"
+                                    class="px-4 py-2 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0 text-sm">
+                                    {{ getBreadcrumbPathText(c.id) }}
+                                </div>
+                                <div v-if="filteredCatParents.length === 0" class="px-4 py-2 text-[#6b635a] text-sm">Keine</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metadata Key/Value Editor -->
+                    <div>
+                        <label class="block text-sm text-[#a89f94] mb-2">Metadata</label>
+                        <div class="space-y-2">
+                            <div v-for="(kv, kvi) in catMetadata" :key="kvi" class="flex items-center gap-2">
+                                <input v-model="kv.key" placeholder="Key"
+                                    class="input-field w-2/5 px-3 py-1.5 rounded text-xs font-mono">
+                                <input v-model="kv.value" placeholder="Value"
+                                    class="input-field w-2/5 px-3 py-1.5 rounded text-xs">
+                                <button @click="catMetadata.splice(kvi, 1)"
+                                    class="text-[#c44536] hover:text-[#d9584a] p-1">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <button @click="catMetadata.push({ key: '', value: '' })"
+                                class="text-xs text-[#d4a853] hover:text-[#e8c278]">
+                                <i class="fas fa-plus mr-1"></i>Eintrag hinzufügen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end gap-3">
+                    <button @click="closeCategoryModal" class="btn-secondary px-5 py-2.5 rounded-lg">Abbrechen</button>
+                    <button @click="saveCategory" class="btn-primary px-5 py-2.5 rounded-lg">{{ editingCategory ? 'Aktualisieren' : 'Hinzufügen' }}</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Field Modal -->
+        <div v-if="showFieldModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between">
+                    <h2 class="modal-title text-2xl">{{ editingField ? 'Feld bearbeiten' : 'Feld hinzufügen' }}</h2>
+                    <button @click="closeFieldModal" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5 space-y-5">
+                    <!-- Name -->
+                    <div>
+                        <label class="block text-sm text-[#a89f94] mb-2">Feldname</label>
+                        <div class="flex rounded-xl overflow-hidden border border-[#3d3528] mb-3">
+                            <button @click="fieldNameMode = 'new'" :class="['flex-1 px-4 py-2 text-sm transition', fieldNameMode === 'new' ? 'btn-primary' : 'toggle-btn']">Erstellen</button>
+                            <button @click="fieldNameMode = 'existing'" :class="['flex-1 px-4 py-2 text-sm transition', fieldNameMode === 'existing' ? 'btn-primary' : 'toggle-btn']">Vorhandenes</button>
+                        </div>
+                        <div v-if="fieldNameMode === 'new'">
+                            <div v-for="lang in languages" :key="lang" class="mb-2">
+                                <label class="block text-xs text-[#6b635a] mb-0.5 uppercase">{{ lang }}</label>
+                                <input v-model="fieldNameNew[lang]" type="text" class="input-field w-full px-4 py-2 rounded-lg text-sm" :placeholder="lang">
+                            </div>
+                        </div>
+                        <div v-else class="relative">
+                            <input v-model="fieldNameSearch" type="text" placeholder="Übersetzung suchen..."
+                                class="input-field w-full px-4 py-2 rounded-lg text-sm" @focus="fieldShowNameDropdown = true">
+                            <div v-if="fieldShowNameDropdown" class="searchable-select-dropdown w-full rounded-lg mt-1">
+                                <div v-for="t in filteredFieldNameTrans" :key="t.id" @click="selectFieldNameTrans(t)"
+                                    class="px-4 py-2 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0 text-sm">
+                                    <span class="text-amber-50">{{ t.translation.de }}</span>
+                                    <span v-if="t.translation.en" class="text-[#6b635a] ml-2">({{ t.translation.en }})</span>
+                                </div>
+                                <div v-if="filteredFieldNameTrans.length === 0" class="px-4 py-2 text-[#6b635a] text-sm">Keine</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Type -->
+                    <div>
+                        <label class="block text-sm text-[#a89f94] mb-2">Typ</label>
+                        <div class="flex rounded-xl overflow-hidden border border-[#3d3528] w-fit">
+                            <button v-for="t in fieldTypes" :key="t"
+                                @click="newFieldType = t"
+                                :class="['px-5 py-2.5 text-sm transition', newFieldType === t ? 'btn-primary' : 'toggle-btn']">
+                                {{ t }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Config (dynamic) -->
+                    <div v-if="newFieldConfigFields.length > 0">
+                        <label class="block text-sm text-[#a89f94] mb-2">Konfiguration</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div v-for="cfg in newFieldConfigFields" :key="cfg.key">
+                                <label class="block text-xs text-[#6b635a] mb-0.5">{{ cfg.label }}</label>
+                                <input v-if="cfg.type === 'number'"
+                                    v-model.number="newFieldConfig[cfg.key]"
+                                    type="number" :step="cfg.step || 'any'"
+                                    class="input-field w-full px-3 py-1.5 rounded text-sm">
+                                <input v-else-if="cfg.type === 'checkbox'"
+                                    v-model="newFieldConfig[cfg.key]"
+                                    type="checkbox" class="accent-[#d4a853] mt-1">
+                                <input v-else
+                                    v-model="newFieldConfig[cfg.key]"
+                                    class="input-field w-full px-3 py-1.5 rounded text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder -->
+                    <div>
+                        <label class="block text-sm text-[#a89f94] mb-2">Platzhalter</label>
+                        <div class="flex rounded-xl overflow-hidden border border-[#3d3528] mb-3">
+                            <button @click="fieldPlaceholderMode = 'new'" :class="['flex-1 px-4 py-2 text-sm transition', fieldPlaceholderMode === 'new' ? 'btn-primary' : 'toggle-btn']">Erstellen</button>
+                            <button @click="fieldPlaceholderMode = 'existing'" :class="['flex-1 px-4 py-2 text-sm transition', fieldPlaceholderMode === 'existing' ? 'btn-primary' : 'toggle-btn']">Vorhandenes</button>
+                            <button @click="fieldPlaceholderMode = 'standard'" :class="['flex-1 px-4 py-2 text-sm transition', fieldPlaceholderMode === 'standard' ? 'btn-primary' : 'toggle-btn']">Standard</button>
+                        </div>
+                        <div v-if="fieldPlaceholderMode === 'new'">
+                            <div v-for="lang in languages" :key="lang" class="mb-2">
+                                <label class="block text-xs text-[#6b635a] mb-0.5 uppercase">{{ lang }}</label>
+                                <input v-model="fieldPlaceholderNew[lang]" type="text" class="input-field w-full px-4 py-2 rounded-lg text-sm" :placeholder="lang">
+                            </div>
+                        </div>
+                        <div v-else-if="fieldPlaceholderMode === 'existing'" class="relative">
+                            <input v-model="fieldPlaceholderSearch" type="text" placeholder="Übersetzung suchen..."
+                                class="input-field w-full px-4 py-2 rounded-lg text-sm" @focus="fieldShowPlaceholderDropdown = true">
+                            <div v-if="fieldShowPlaceholderDropdown" class="searchable-select-dropdown w-full rounded-lg mt-1">
+                                <div v-for="t in filteredFieldPlaceholderTrans" :key="t.id" @click="selectFieldPlaceholderTrans(t)"
+                                    class="px-4 py-2 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0 text-sm">
+                                    <span class="text-amber-50">{{ t.translation.de }}</span>
+                                    <span v-if="t.translation.en" class="text-[#6b635a] ml-2">({{ t.translation.en }})</span>
+                                </div>
+                                <div v-if="filteredFieldPlaceholderTrans.length === 0" class="px-4 py-2 text-[#6b635a] text-sm">Keine</div>
+                            </div>
+                        </div>
+                        <div v-else-if="fieldPlaceholderMode === 'standard'" class="text-sm text-[#6b635a] bg-[#242118] border border-[#3d3528] rounded-lg px-4 py-3">
+                            <i class="fas fa-link text-[#d4a853] mr-2"></i>Verwendet den Feldnamen als Platzhalter
+                        </div>
+                    </div>
+
+                    <!-- Required -->
+                    <div class="flex items-center gap-2">
+                        <input v-model="newFieldRequired" type="checkbox" class="accent-[#d4a853]">
+                        <label class="text-sm text-[#a89f94]">Required</label>
+                    </div>
+                </div>
+                <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end gap-3">
+                    <button @click="closeFieldModal" class="btn-secondary px-5 py-2.5 rounded-lg">Abbrechen</button>
+                    <button @click="saveField" class="btn-primary px-5 py-2.5 rounded-lg">{{ editingField ? 'Aktualisieren' : 'Hinzufügen' }}</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Option Modal -->
+        <div v-if="showOptionModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-md animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between">
+                    <h2 class="modal-title text-2xl">{{ editingOption ? 'Option bearbeiten' : 'Option hinzufügen' }}</h2>
+                    <button @click="closeOptionModal" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5 space-y-5">
+                    <!-- Label -->
+                    <div>
+                        <label class="block text-sm text-[#a89f94] mb-2">Label</label>
+                        <div class="flex rounded-xl overflow-hidden border border-[#3d3528] mb-3">
+                            <button @click="optionTransMode = 'new'" :class="['flex-1 px-4 py-2 text-sm transition', optionTransMode === 'new' ? 'btn-primary' : 'toggle-btn']">Erstellen</button>
+                            <button @click="optionTransMode = 'existing'" :class="['flex-1 px-4 py-2 text-sm transition', optionTransMode === 'existing' ? 'btn-primary' : 'toggle-btn']">Vorhandenes</button>
+                        </div>
+                        <div v-if="optionTransMode === 'new'">
+                            <div v-for="lang in languages" :key="lang" class="mb-2">
+                                <label class="block text-xs text-[#6b635a] mb-0.5 uppercase">{{ lang }}</label>
+                                <input v-model="optionTransNew[lang]"
+                                    @input="lang === 'de' && (optionValue = slugify(optionTransNew['de']))"
+                                    type="text" class="input-field w-full px-4 py-2 rounded-lg text-sm" :placeholder="lang">
+                            </div>
+                        </div>
+                        <div v-else class="relative">
+                            <input v-model="optionTransSearch" type="text" placeholder="Übersetzung suchen..."
+                                class="input-field w-full px-4 py-2 rounded-lg text-sm"
+                                @focus="optionShowTransDropdown = true">
+                            <div v-if="optionShowTransDropdown" class="searchable-select-dropdown w-full rounded-lg mt-1">
+                                <div v-for="t in filteredOptionTrans" :key="t.id" @click="selectOptionTrans(t)"
+                                    class="px-4 py-2 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0 text-sm">
+                                    <span class="text-amber-50">{{ t.translation.de }}</span>
+                                    <span v-if="t.translation.en" class="text-[#6b635a] ml-2">({{ t.translation.en }})</span>
+                                </div>
+                                <div v-if="filteredOptionTrans.length === 0" class="px-4 py-2 text-[#6b635a] text-sm">Keine</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Value (slug) -->
+                    <div>
+                        <label class="block text-sm text-[#a89f94] mb-2">Slug-Wert</label>
+                        <input v-model="optionValue" type="text" placeholder="z.B. bmw"
+                            class="input-field w-full px-4 py-2 rounded-lg text-sm font-mono">
+                        <p class="text-xs text-[#6b635a] mt-1">Eindeutiger Bezeichner für dieses Feld</p>
+                    </div>
+                </div>
+                <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end gap-3">
+                    <button @click="closeOptionModal" class="btn-secondary px-5 py-2.5 rounded-lg">Abbrechen</button>
+                    <button @click="saveOption" class="btn-primary px-5 py-2.5 rounded-lg">{{ editingOption ? 'Aktualisieren' : 'Hinzufügen' }}</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dependency Picker (small overlay) -->
+        <div v-if="showDepPicker" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-xl shadow-2xl w-full max-w-sm animate-slide">
+                <div class="px-5 py-4 border-b border-[#3d3528] flex items-center justify-between">
+                    <h3 class="font-display text-lg">Abhängigkeit hinzufügen</h3>
+                    <button @click="showDepPicker = false" class="icon-btn p-1 rounded hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-5 py-4">
+                    <p class="text-xs text-[#a89f94] mb-3">Zeige <strong class="text-amber-50">{{ depPickerFieldLabel }}</strong> erst, wenn folgendes Feld ausgefüllt oder ausgewählt wurde:</p>
+                    <div class="relative">
+                        <input v-model="depSearch" type="text" placeholder="Feld suchen..."
+                            class="input-field w-full px-4 py-2 rounded-lg text-sm">
+                        <div class="searchable-select-dropdown w-full rounded-lg mt-1 relative" v-if="true">
+                            <div v-for="f in filteredDepFields" :key="f.id" @click="addDependency(f.id)"
+                                class="flex items-center gap-2 px-4 py-2 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0 text-sm">
+                                <span class="flex-1">{{ getTranslationText(f.translationId) }}</span>
+                                <span class="text-[10px] text-[#6b635a]">({{ f.type }})</span>
+                                <i v-if="getVisibleFieldDependency(depPickerFieldId) && getDependencySourceFieldId(getVisibleFieldDependency(depPickerFieldId)) === f.id"
+                                    class="fas fa-check text-[#d4a853] text-xs"></i>
+                            </div>
+                            <div v-if="filteredDepFields.length === 0" class="px-4 py-2 text-[#6b635a] text-sm">Keine Felder verfügbar</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Option Filter Modal -->
+        <div v-if="showOptionFilterModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between">
+                    <h2 class="modal-title text-2xl">Optionen filtern</h2>
+                    <button @click="showOptionFilterModal = false" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5">
+                    <p class="text-xs text-[#a89f94] mb-4">Wenn <strong class="text-amber-50">{{ optionFilterTriggerLabel }}</strong> gewählt ist, nur diese Optionen anzeigen:</p>
+                    <div class="relative mb-4">
+                        <input v-model="optionFilterSearch" type="text" placeholder="Option suchen..."
+                            class="input-field w-full px-4 py-2 rounded-lg text-sm">
+                    </div>
+                    <div v-if="optionFilterGroupedComputed.length === 0" class="text-center text-[#6b635a] py-8 text-sm">
+                        Keine weiteren Select-Felder in dieser Kategorie
+                    </div>
+                    <div v-for="group in optionFilterGroupedComputed" :key="'g-' + group.fieldId"
+                        class="mb-4 bg-[#242118] border border-[#3d3528] rounded-lg overflow-hidden">
+                        <div class="px-4 py-2 border-b border-[#3d3528] text-xs text-[#a89f94] font-medium">
+                            {{ group.fieldName }}
+                        </div>
+                        <div class="p-2 space-y-0.5">
+                            <div v-for="opt in group.options" :key="'vo-' + opt.id"
+                                @click="toggleOptionDependency(opt.id)"
+                                class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-[#2e2820] transition">
+                                <input :checked="opt.checked" type="checkbox"
+                                    class="accent-[#d4a853] pointer-events-none">
+                                <span class="text-sm text-amber-50">{{ opt.label }}</span>
+                                <span class="text-[10px] text-[#6b635a] font-mono">({{ opt.value }})</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end">
+                    <button @click="showOptionFilterModal = false" class="btn-primary px-5 py-2.5 rounded-lg">Fertig</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div v-if="showDeleteModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528]">
+                    <h2 class="modal-title text-2xl text-[#c44536]">Löschen bestätigen</h2>
+                </div>
+                <div class="px-6 py-5">
+                    <p class="text-[#a89f94] mb-3">Folgendes wird gelöscht:</p>
+                    <ul class="space-y-2">
+                        <li v-for="item in deletePreview" :key="item.id" class="flex items-center gap-2 text-sm"
+                            :class="item.depth === 0 ? 'text-amber-50' : 'text-[#a89f94]'">
+                            <i :class="item.icon" class="text-[#d4a853] w-4 text-center"></i>
+                            <span :style="{ paddingLeft: item.depth * 12 + 'px' }">{{ item.label }}</span>
+                        </li>
+                    </ul>
+                    <p v-if="deleteLocalAction" class="text-xs text-[#a89f94] mt-4 bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-2">
+                        Alternative: <strong class="text-amber-50">{{ deleteLocalLabel }}</strong> entfernt nur die Zuordnung in der aktuellen Kategorie bzw. im Kategoriebaum und lässt Referenzen in anderen Kategorien bestehen.
+                    </p>
+                </div>
+                <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end gap-3">
+                    <button @click="showDeleteModal = false" class="btn-secondary px-5 py-2.5 rounded-lg">Abbrechen</button>
+                    <button v-if="deleteLocalAction" @click="executeLocalDelete" class="btn-secondary px-5 py-2.5 rounded-lg">{{ deleteLocalLabel }}</button>
+                    <button @click="executeDelete" class="bg-[#c44536] text-white px-5 py-2.5 rounded-lg hover:bg-[#d9584a] transition">{{ deletePrimaryLabel }}</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Translation Picker Modal -->
+        <div v-if="showTransPicker" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-md animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between">
+                    <h2 class="modal-title text-2xl">Übersetzung auswählen</h2>
+                    <button @click="showTransPicker = false" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5">
+                    <div class="relative">
+                        <input v-model="transPickerSearch" type="text" placeholder="Übersetzung suchen..."
+                            class="input-field w-full px-4 py-2.5 rounded-lg" autofocus>
+                        <div class="searchable-select-dropdown w-full rounded-lg mt-2 relative max-h-60">
+                            <div v-for="t in filteredTransPicker" :key="t.id" @click="selectTransPicker(t)"
+                                class="px-4 py-3 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0">
+                                <span class="text-amber-50">{{ t.translation.de }}</span>
+                                <span v-if="t.translation.en" class="text-[#6b635a] ml-2">({{ t.translation.en }})</span>
+                            </div>
+                            <div v-if="filteredTransPicker.length === 0" class="px-4 py-3 text-[#6b635a]">Keine Übersetzungen gefunden</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Copy Field to Categories Modal -->
+        <div v-if="showCopyModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between">
+                    <h2 class="modal-title text-2xl">Feld kopieren</h2>
+                    <button @click="showCopyModal = false" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5">
+                    <p class="text-sm text-[#a89f94] mb-2">
+                        Kopiere <strong class="text-amber-50">{{ copySourceField ? getTranslationText(copySourceField.translationId) : '' }}</strong> in Kategorien:
+                    </p>
+                    <div class="relative mb-4">
+                        <input v-model="copyCategorySearch" type="text" placeholder="Kategorie suchen..."
+                            class="input-field w-full px-4 py-2.5 rounded-lg" autofocus>
+                    </div>
+                    <div class="max-h-64 overflow-y-auto space-y-0.5 border border-[#3d3528] rounded-lg p-1">
+                        <div v-for="cat in filteredCopyCategories" :key="cat.id"
+                            @click="toggleCopyCategory(cat.id)"
+                            class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-[#2e2820] transition">
+                            <input :checked="copySelectedCategoryIds.has(cat.id)" type="checkbox"
+                                class="accent-[#d4a853] pointer-events-none">
+                            <span class="text-sm text-amber-50">{{ getTranslationText(cat.translationId) }}</span>
+                            <span class="text-[10px] text-[#6b635a] ml-auto truncate max-w-[200px]">{{ getBreadcrumbPathText(cat.id) }}</span>
+                        </div>
+                        <div v-if="filteredCopyCategories.length === 0" class="text-center text-[#6b635a] py-6 text-sm">
+                            Keine Kategorien gefunden
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end gap-3">
+                    <button @click="showCopyModal = false" class="btn-secondary px-5 py-2.5 rounded-lg">Abbrechen</button>
+                    <button @click="executeReferenceCopy"
+                        :disabled="copySelectedCategoryIds.size === 0"
+                        class="btn-ghost px-5 py-2.5 rounded-lg border border-[#d4a853] text-[#d4a853] hover:bg-[#d4a853] hover:text-[#1a1814] transition disabled:opacity-40">
+                        <i class="fas fa-link mr-2"></i>Als Referenz
+                    </button>
+                    <button @click="executeDeepCopy"
+                        :disabled="copySelectedCategoryIds.size === 0"
+                        class="btn-primary px-5 py-2.5 rounded-lg disabled:opacity-40">
+                        <i class="fas fa-copy mr-2"></i>Als Kopie
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Language Modal -->
+        <div v-if="showLanguageModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between">
+                    <h2 class="modal-title text-2xl">Sprachen</h2>
+                    <button @click="showLanguageModal = false" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5">
+                    <div class="mb-6">
+                        <h3 class="text-sm text-[#a89f94] mb-3">Aktuelle Sprachen</h3>
+                        <div class="flex flex-wrap gap-2">
+                            <span v-for="lang in languages" :key="lang" class="lang-tag flex items-center gap-2 px-3 py-1.5 rounded-full text-sm">
+                                {{ lang }}
+                                <button @click="confirmRemoveLanguage(lang)" class="text-[#c44536] hover:text-[#d9584a]">
+                                    <i class="fas fa-times-circle"></i>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-sm text-[#a89f94] mb-3">Sprache hinzufügen</h3>
+                        <div class="relative">
+                            <input v-model="languageSearch" type="text" placeholder="Suche Sprache..."
+                                class="input-field w-full px-4 py-2.5 rounded-lg"
+                                @focus="showLanguageDropdown = true">
+                            <div v-if="showLanguageDropdown" class="searchable-select-dropdown w-full rounded-lg mt-2">
+                                <div v-for="lang in filteredLanguages" :key="lang.code" @click="addLanguage(lang.code)"
+                                    class="px-4 py-3 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0">
+                                    <span class="text-amber-50">{{ lang.code }}</span>
+                                    <span class="text-[#6b635a] ml-2">- {{ lang.name }}</span>
+                                </div>
+                                <div v-if="filteredLanguages.length === 0" class="px-4 py-3 text-[#6b635a]">Keine Sprachen gefunden</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Remove Language Confirmation -->
+        <div v-if="showRemoveLangModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528]">
+                    <h2 class="modal-title text-2xl text-[#c44536]">Sprache entfernen</h2>
+                </div>
+                <div class="px-6 py-5">
+                    <p class="text-amber-50 mb-2">"{{ removeLangInfo?.code }}" entfernen?</p>
+                    <p class="text-[#6b635a]">{{ removeLangInfo?.count }} Übersetzung(en) betroffen.</p>
+                </div>
+                <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end gap-3">
+                    <button @click="showRemoveLangModal = false" class="btn-secondary px-5 py-2.5 rounded-lg">Abbrechen</button>
+                    <button @click="executeRemoveLanguage" class="bg-[#c44536] text-white px-5 py-2.5 rounded-lg hover:bg-[#d9584a] transition">Entfernen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, watch, nextTick, onMounted, onUpdated } = Vue;
+
+        const ISO_LANGUAGES = [
+            { code: 'ab', name: 'Abchasisch' }, { code: 'aa', name: 'Afar' }, { code: 'af', name: 'Afrikaans' }, { code: 'sq', name: 'Albanisch' }, { code: 'am', name: 'Amharisch' }, { code: 'ar', name: 'Arabisch' }, { code: 'an', name: 'Aragonesisch' }, { code: 'hy', name: 'Armenisch' }, { code: 'as', name: 'Assamesisch' }, { code: 'ay', name: 'Aymara' }, { code: 'az', name: 'Aserbaidschanisch' }, { code: 'bm', name: 'Bambara' }, { code: 'eu', name: 'Baskisch' }, { code: 'be', name: 'Weißrussisch' }, { code: 'bn', name: 'Bengalisch' }, { code: 'bh', name: 'Bihari' }, { code: 'bi', name: 'Bislama' }, { code: 'bs', name: 'Bosnisch' }, { code: 'br', name: 'Bretonisch' }, { code: 'bg', name: 'Bulgarisch' }, { code: 'my', name: 'Birmanisch' }, { code: 'ca', name: 'Katalanisch' }, { code: 'ch', name: 'Chamorro' }, { code: 'ce', name: 'Tschetschenisch' }, { code: 'ny', name: 'Chichewa' }, { code: 'zh', name: 'Chinesisch' }, { code: 'kw', name: 'Kornisch' }, { code: 'co', name: 'Korsisch' }, { code: 'hr', name: 'Kroatisch' }, { code: 'cs', name: 'Tschechisch' }, { code: 'da', name: 'Dänisch' }, { code: 'nl', name: 'Niederländisch' }, { code: 'dz', name: 'Dzongkha' }, { code: 'en', name: 'Englisch' }, { code: 'eo', name: 'Esperanto' }, { code: 'et', name: 'Estnisch' }, { code: 'ee', name: 'Ewe' }, { code: 'fo', name: 'Färöisch' }, { code: 'fj', name: 'Fidschi' }, { code: 'fi', name: 'Finnisch' }, { code: 'fr', name: 'Französisch' }, { code: 'ff', name: 'Fulah' }, { code: 'gl', name: 'Galizisch' }, { code: 'ka', name: 'Georgisch' }, { code: 'de', name: 'Deutsch' }, { code: 'el', name: 'Griechisch' }, { code: 'gn', name: 'Guarani' }, { code: 'gu', name: 'Gujarati' }, { code: 'ht', name: 'Haitianisch' }, { code: 'ha', name: 'Hausa' }, { code: 'he', name: 'Hebräisch' }, { code: 'hz', name: 'Herero' }, { code: 'hi', name: 'Hindi' }, { code: 'ho', name: 'Hiri Motu' }, { code: 'hu', name: 'Ungarisch' }, { code: 'is', name: 'Isländisch' }, { code: 'io', name: 'Ido' }, { code: 'ig', name: 'Igbo' }, { code: 'id', name: 'Indonesisch' }, { code: 'ia', name: 'Interlingua' }, { code: 'ie', name: 'Interlingue' }, { code: 'iu', name: 'Inuktitut' }, { code: 'ik', name: 'Inupiaq' }, { code: 'ga', name: 'Irisch' }, { code: 'it', name: 'Italienisch' }, { code: 'ja', name: 'Japanisch' }, { code: 'jv', name: 'Javanisch' }, { code: 'kl', name: 'Grönländisch' }, { code: 'kn', name: 'Kannada' }, { code: 'ks', name: 'Kaschmirisch' }, { code: 'kk', name: 'Kasachisch' }, { code: 'km', name: 'Khmer' }, { code: 'rw', name: 'Kinyarwanda' }, { code: 'ky', name: 'Kirgisisch' }, { code: 'kv', name: 'Komi' }, { code: 'ko', name: 'Koreanisch' }, { code: 'ku', name: 'Kurdisch' }, { code: 'lo', name: 'Laotisch' }, { code: 'la', name: 'Latein' }, { code: 'lv', name: 'Lettisch' }, { code: 'li', name: 'Limburgisch' }, { code: 'ln', name: 'Lingala' }, { code: 'lt', name: 'Litauisch' }, { code: 'lb', name: 'Luxemburgisch' }, { code: 'mk', name: 'Mazedonisch' }, { code: 'mg', name: 'Madagassisch' }, { code: 'ms', name: 'Malaiisch' }, { code: 'ml', name: 'Malayalam' }, { code: 'mt', name: 'Maltesisch' }, { code: 'mi', name: 'Maori' }, { code: 'mr', name: 'Marathi' }, { code: 'mo', name: 'Moldawisch' }, { code: 'mn', name: 'Mongolisch' }, { code: 'na', name: 'Nauruisch' }, { code: 'ne', name: 'Nepalesisch' }, { code: 'no', name: 'Norwegisch' }, { code: 'nb', name: 'Norwegisch Bokmål' }, { code: 'nn', name: 'Norwegisch Nynorsk' }, { code: 'oc', name: 'Okzitanisch' }, { code: 'or', name: 'Oriya' }, { code: 'om', name: 'Oromo' }, { code: 'os', name: 'Ossetisch' }, { code: 'pa', name: 'Pandschabisch' }, { code: 'fa', name: 'Persisch' }, { code: 'pl', name: 'Polnisch' }, { code: 'pt', name: 'Portugiesisch' }, { code: 'ps', name: 'Paschtu' }, { code: 'qu', name: 'Quechua' }, { code: 'rm', name: 'Rätoromanisch' }, { code: 'ro', name: 'Rumänisch' }, { code: 'ru', name: 'Russisch' }, { code: 'sm', name: 'Samoanisch' }, { code: 'sg', name: 'Sango' }, { code: 'sa', name: 'Sanskrit' }, { code: 'gd', name: 'Schottisch-Gälisch' }, { code: 'sr', name: 'Serbisch' }, { code: 'sh', name: 'Serbokroatisch' }, { code: 'st', name: 'Sesothisch' }, { code: 'tn', name: 'Setswana' }, { code: 'sn', name: 'Shona' }, { code: 'sd', name: 'Sindhi' }, { code: 'si', name: 'Singhalesisch' }, { code: 'sk', name: 'Slowakisch' }, { code: 'sl', name: 'Slowenisch' }, { code: 'so', name: 'Somali' }, { code: 'es', name: 'Spanisch' }, { code: 'su', name: 'Sudanesisch' }, { code: 'sw', name: 'Suaheli' }, { code: 'ss', name: 'Swasi' }, { code: 'sv', name: 'Schwedisch' }, { code: 'tl', name: 'Tagalog' }, { code: 'tg', name: 'Tadschikisch' }, { code: 'ta', name: 'Tamilisch' }, { code: 'tt', name: 'Tatarisch' }, { code: 'te', name: 'Telugu' }, { code: 'th', name: 'Thailändisch' }, { code: 'bo', name: 'Tibetisch' }, { code: 'ti', name: 'Tigrinja' }, { code: 'to', name: 'Tongaisch' }, { code: 'ts', name: 'Tsonga' }, { code: 'tr', name: 'Türkisch' }, { code: 'tk', name: 'Turkmenisch' }, { code: 'tw', name: 'Twi' }, { code: 'ug', name: 'Uigurisch' }, { code: 'uk', name: 'Ukrainisch' }, { code: 'ur', name: 'Urdu' }, { code: 'uz', name: 'Usbekisch' }, { code: 've', name: 'Venda' }, { code: 'vi', name: 'Vietnamesisch' }, { code: 'vo', name: 'Volapük' }, { code: 'wa', name: 'Wallonisch' }, { code: 'cy', name: 'Walisisch' }, { code: 'wo', name: 'Wolof' }, { code: 'xh', name: 'Xhosa' }, { code: 'yi', name: 'Jiddisch' }, { code: 'yo', name: 'Yoruba' }, { code: 'za', name: 'Zhuang' }, { code: 'zu', name: 'Zulu' }
+        ];
+
+        createApp({
+            setup() {
+                // ─── STATE ───
+                const hasProject = ref(false);
+                const projectName = ref('');
+                const categories = ref([]);
+                const fields = ref([]);
+                const fieldCategories = ref([]);
+                const fieldOptions = ref([]);
+                const fieldDependencies = ref([]);
+                const optionDependencies = ref([]);
+                const translations = ref([]);
+                const languages = ref(['de', 'en']);
+
+                const selectedCategoryId = ref(null);
+                const expandedCategoryIds = ref(new Set());
+                const expandedFieldIds = ref(new Set());
+                const searchQuery = ref('');
+                const fileInput = ref(null);
+                const treeContainer = ref(null);
+
+                const fieldTypes = ['text', 'textarea', 'number', 'select'];
+
+                // ─── CATEGORY MODAL STATE ───
+                const showCategoryModal = ref(false);
+                const editingCategory = ref(null);
+                const catTransMode = ref('new');
+                const catTransNew = ref({});
+                const catTransSearch = ref('');
+                const catSelectedTransId = ref(null);
+                const catShowTransDropdown = ref(false);
+                const catParentSearch = ref('');
+                const catSelectedParentId = ref(null);
+                const catShowParentDropdown = ref(false);
+                const catMetadata = ref([]);
+
+                // ─── FIELD MODAL STATE ───
+                const showFieldModal = ref(false);
+                const editingField = ref(null);
+                const newFieldType = ref('text');
+                const newFieldRequired = ref(false);
+                const newFieldConfig = ref({});
+
+                const fieldNameMode = ref('new');
+                const fieldNameNew = ref({});
+                const fieldNameSearch = ref('');
+                const fieldSelectedNameId = ref(null);
+                const fieldShowNameDropdown = ref(false);
+
+                const fieldPlaceholderMode = ref('new');
+                const fieldPlaceholderNew = ref({});
+                const fieldPlaceholderSearch = ref('');
+                const fieldSelectedPlaceholderId = ref(null);
+                const fieldShowPlaceholderDropdown = ref(false);
+
+                // ─── OPTION FILTER PICKER STATE ───
+                const showOptionFilterModal = ref(false);
+                const optionFilterTriggerOptionId = ref(null);
+                const optionFilterTriggerLabel = ref('');
+                const optionFilterSearch = ref('');
+                const optionFilterGroupedOptions = ref([]);
+
+                // ─── COPY MODAL STATE ───
+                const showCopyModal = ref(false);
+                const copySourceField = ref(null);
+                const copyCategorySearch = ref('');
+                const copySelectedCategoryIds = ref(new Set());
+
+                const filteredCopyCategories = computed(() => {
+                    const q = copyCategorySearch.value.toLowerCase();
+                    return categories.value.filter(c => {
+                        if (!selectedCategoryId.value) return true;
+                        if (c.id === selectedCategoryId.value) return false;
+                        const name = getTranslationText(c.translationId).toLowerCase();
+                        const path = getBreadcrumbPathText(c.id).toLowerCase();
+                        return name.includes(q) || path.includes(q);
+                    });
+                });
+
+                function openCopyModal(field) {
+                    copySourceField.value = field;
+                    copyCategorySearch.value = '';
+                    copySelectedCategoryIds.value = new Set();
+                    showCopyModal.value = true;
+                }
+
+                function toggleCopyCategory(catId) {
+                    const set = new Set(copySelectedCategoryIds.value);
+                    if (set.has(catId)) set.delete(catId);
+                    else set.add(catId);
+                    copySelectedCategoryIds.value = set;
+                }
+
+                function executeDeepCopy() {
+                    const src = copySourceField.value;
+                    if (!src || copySelectedCategoryIds.value.size === 0) return;
+
+                    const targetCatIds = [...copySelectedCategoryIds.value];
+
+                    for (const catId of targetCatIds) {
+                        const newId = generateId(fields.value);
+                        const newField = {
+                            id: newId,
+                            translationId: src.translationId,
+                            type: src.type,
+                            placeholderTranslationId: src.placeholderTranslationId,
+                            required: src.required,
+                            config: src.config ? JSON.parse(JSON.stringify(src.config)) : null
+                        };
+                        fields.value.push(newField);
+                        fieldCategories.value.push({
+                            id: generateId(fieldCategories.value),
+                            fieldId: newId,
+                            categoryId: catId,
+                            order: getFieldIdsForCategory(catId).length
+                        });
+
+                        const srcOpts = getFieldOptionsList(src.id);
+                        for (const opt of srcOpts) {
+                            fieldOptions.value.push({
+                                id: generateId(fieldOptions.value),
+                                fieldId: newId,
+                                labelTranslationId: opt.labelTranslationId,
+                                value: opt.value,
+                                order: opt.order
+                            });
+                        }
+                    }
+
+                    showCopyModal.value = false;
+                    copySourceField.value = null;
+                }
+
+                function executeReferenceCopy() {
+                    const src = copySourceField.value;
+                    if (!src || copySelectedCategoryIds.value.size === 0) return;
+
+                    const targetCatIds = [...copySelectedCategoryIds.value];
+                    for (const catId of targetCatIds) {
+                        const existing = fieldCategories.value.some(fc =>
+                            fc.fieldId === src.id && fc.categoryId === catId
+                        );
+                        if (existing) continue;
+                        fieldCategories.value.push({
+                            id: generateId(fieldCategories.value),
+                            fieldId: src.id,
+                            categoryId: catId,
+                            order: getFieldIdsForCategory(catId).length
+                        });
+                    }
+
+                    showCopyModal.value = false;
+                    copySourceField.value = null;
+                }
+
+                // ─── DEPENDENCY PICKER STATE ───
+                const showDepPicker = ref(false);
+                const depPickerFieldId = ref(null);
+                const depPickerFieldLabel = ref('');
+                const depSearch = ref('');
+
+                // ─── DELETE STATE ───
+                const showDeleteModal = ref(false);
+                const deletePreview = ref([]);
+                const deleteAction = ref(null);
+                const deleteLocalAction = ref(null);
+                const deletePrimaryLabel = ref('Löschen');
+                const deleteLocalLabel = ref('');
+
+                // ─── TRANSLATION PICKER STATE ───
+                const showTransPicker = ref(false);
+                const transPickerSearch = ref('');
+                const transPickerContext = ref(null);
+                const transPickerTarget = ref(null);
+
+                const filteredTransPicker = computed(() => {
+                    if (!transPickerSearch.value) return translations.value;
+                    const q = transPickerSearch.value.toLowerCase();
+                    return translations.value.filter(t =>
+                        (t.translation.de || '').toLowerCase().includes(q) ||
+                        (t.translation.en || '').toLowerCase().includes(q)
+                    );
+                });
+
+                function openTranslationPicker(context, target) {
+                    transPickerContext.value = context;
+                    transPickerTarget.value = target;
+                    transPickerSearch.value = '';
+                    showTransPicker.value = true;
+                }
+
+                function selectTransPicker(trans) {
+                    const target = transPickerTarget.value;
+                    const context = transPickerContext.value;
+                    if (!target || !context) return;
+
+                    const oldTransId = context === 'fieldName' ? target.translationId
+                        : context === 'fieldPlaceholder' ? target.placeholderTranslationId
+                        : context === 'optionLabel' ? target.labelTranslationId
+                        : null;
+
+                    if (oldTransId === trans.id) {
+                        showTransPicker.value = false;
+                        return;
+                    }
+
+                    if (context === 'fieldName') target.translationId = trans.id;
+                    else if (context === 'fieldPlaceholder') target.placeholderTranslationId = trans.id;
+                    else if (context === 'optionLabel') target.labelTranslationId = trans.id;
+
+                    cleanupOrphanedTranslations();
+                    showTransPicker.value = false;
+                }
+
+                // ─── LANGUAGE STATE ───
+                const showLanguageModal = ref(false);
+                const languageSearch = ref('');
+                const showLanguageDropdown = ref(false);
+                const showRemoveLangModal = ref(false);
+                const removeLangInfo = ref(null);
+
+                // ─── COMPUTED ───
+                const flatTree = computed(() => {
+                    const result = [];
+                    function walk(parentId, depth) {
+                        const children = categories.value
+                            .filter(c => c.parentId === parentId)
+                            .sort((a, b) => a.order - b.order);
+                        for (const child of children) {
+                            const isExpanded = expandedCategoryIds.value.has(child.id);
+                            const hasChildren = categories.value.some(c => c.parentId === child.id);
+                            result.push({ ...child, depth, isExpanded, hasChildren });
+                            if (isExpanded) walk(child.id, depth + 1);
+                        }
+                    }
+                    walk(null, 0);
+                    return result;
+                });
+
+                const selectedCategory = computed(() =>
+                    categories.value.find(c => c.id === selectedCategoryId.value) || null
+                );
+
+                const selectedCategoryName = computed(() => {
+                    if (!selectedCategory.value) return '';
+                    return getTranslationText(selectedCategory.value.translationId);
+                });
+
+                const currentBreadcrumbs = computed(() => {
+                    const result = [];
+                    let currentId = selectedCategoryId.value;
+                    while (currentId) {
+                        const cat = categories.value.find(c => c.id === currentId);
+                        if (!cat) break;
+                        result.unshift({ id: cat.id, name: getTranslationText(cat.translationId), translationId: cat.translationId });
+                        currentId = cat.parentId;
+                    }
+                    return result;
+                });
+
+                const currentFields = computed(() => {
+                    if (!selectedCategoryId.value) return [];
+                    const catFieldIds = fieldCategories.value
+                        .filter(fc => fc.categoryId === selectedCategoryId.value);
+                    const idOrderMap = new Map(catFieldIds.map(fc => [fc.fieldId, fc.order]));
+                    return fields.value
+                        .filter(f => idOrderMap.has(f.id))
+                        .sort((a, b) => (idOrderMap.get(a.id) ?? 0) - (idOrderMap.get(b.id) ?? 0));
+                });
+
+                const filteredCatTranslations = computed(() => {
+                    if (!catTransSearch.value) return translations.value;
+                    const q = catTransSearch.value.toLowerCase();
+                    return translations.value.filter(t =>
+                        (t.translation.de || '').toLowerCase().includes(q) ||
+                        (t.translation.en || '').toLowerCase().includes(q)
+                    );
+                });
+
+                const filteredCatParents = computed(() => {
+                    if (!catParentSearch.value) return categories.value;
+                    const q = catParentSearch.value.toLowerCase();
+                    return categories.value.filter(c => {
+                        const text = getTranslationText(c.translationId).toLowerCase();
+                        const path = getBreadcrumbPathText(c.id).toLowerCase();
+                        return text.includes(q) || path.includes(q);
+                    });
+                });
+
+                const filteredFieldNameTrans = computed(() => {
+                    if (!fieldNameSearch.value) return translations.value;
+                    const q = fieldNameSearch.value.toLowerCase();
+                    return translations.value.filter(t =>
+                        (t.translation.de || '').toLowerCase().includes(q) ||
+                        (t.translation.en || '').toLowerCase().includes(q)
+                    );
+                });
+
+                const filteredFieldPlaceholderTrans = computed(() => {
+                    if (!fieldPlaceholderSearch.value) return translations.value;
+                    const q = fieldPlaceholderSearch.value.toLowerCase();
+                    return translations.value.filter(t =>
+                        (t.translation.de || '').toLowerCase().includes(q) ||
+                        (t.translation.en || '').toLowerCase().includes(q)
+                    );
+                });
+
+                const newFieldConfigFields = computed(() => {
+                    return getConfigFieldsForType(newFieldType.value);
+                });
+
+                const filteredLanguages = computed(() => {
+                    const q = languageSearch.value.toLowerCase();
+                    return ISO_LANGUAGES.filter(l =>
+                        !languages.value.includes(l.code) &&
+                        (l.code.toLowerCase().includes(q) || l.name.toLowerCase().includes(q))
+                    );
+                });
+
+                const optionFilterGroupedComputed = computed(() => {
+                    if (!optionFilterTriggerOptionId.value) return [];
+                    if (!selectedCategoryId.value) return [];
+                    const triggerOpt = fieldOptions.value.find(o => o.id === optionFilterTriggerOptionId.value);
+                    if (!triggerOpt) return [];
+                    const categoryId = selectedCategoryId.value;
+                    const catFieldIds = new Set(getFieldIdsForCategory(categoryId));
+
+                    const selectFields = fields.value.filter(f =>
+                        catFieldIds.has(f.id) && f.type === 'select' && f.id !== triggerOpt.fieldId
+                    );
+
+                    const result = [];
+                    for (const field of selectFields) {
+                        const options = getFieldOptionsList(field.id);
+                        const items = options.map(o => ({
+                            id: o.id,
+                            label: getTranslationText(o.labelTranslationId),
+                            value: o.value,
+                            checked: optionDependencies.value.some(d =>
+                                d.optionId === optionFilterTriggerOptionId.value && d.visibleOptionId === o.id
+                            )
+                        }));
+                        result.push({
+                            fieldId: field.id,
+                            fieldName: getTranslationText(field.translationId),
+                            options: items
+                        });
+                    }
+
+                    if (optionFilterSearch.value) {
+                        const q = optionFilterSearch.value.toLowerCase();
+                        return result.map(g => ({
+                            ...g,
+                            options: g.options.filter(o => o.label.toLowerCase().includes(q))
+                        })).filter(g => g.options.length > 0);
+                    }
+
+                    return result;
+                });
+
+                const filteredDepFields = computed(() => {
+                    if (!selectedCategoryId.value) return [];
+                    if (!depPickerFieldId.value) return [];
+                    const catFieldIds = new Set(getFieldIdsForCategory(selectedCategoryId.value));
+                    const q = depSearch.value.toLowerCase();
+                    return fields.value.filter(f =>
+                        catFieldIds.has(f.id) &&
+                        f.id !== depPickerFieldId.value &&
+                        !wouldCreateDependencyCycle(depPickerFieldId.value, f.id) &&
+                        getTranslationText(f.translationId).toLowerCase().includes(q)
+                    );
+                });
+
+                // ─── HELPERS ───
+                function generateId(arr) {
+                    return arr.length > 0 ? Math.max(...arr.map(x => x.id)) + 1 : 1;
+                }
+
+                function getTranslation(id) {
+                    return translations.value.find(t => t.id === id);
+                }
+
+                function getTranslationText(id) {
+                    const t = getTranslation(id);
+                    return t?.translation?.de || 'Unknown';
+                }
+
+                function getTranslationValue(id, lang) {
+                    const t = getTranslation(id);
+                    return t?.translation?.[lang] || '';
+                }
+
+                function updateTranslation(id, lang, value) {
+                    const t = getTranslation(id);
+                    if (t) t.translation[lang] = value;
+                }
+
+                function getChildCount(categoryId) {
+                    return categories.value.filter(c => c.parentId === categoryId).length;
+                }
+
+                function getFieldOptionsList(fieldId) {
+                    return fieldOptions.value
+                        .filter(o => o.fieldId === fieldId)
+                        .sort((a, b) => a.order - b.order);
+                }
+
+                function getDependencyChildFieldId(dep) {
+                    return dep?.fieldId ?? dep?.childFieldId ?? null;
+                }
+
+                function getDependencySourceFieldId(dep) {
+                    if (!dep) return null;
+                    if (dep.dependsOnFieldId != null) return dep.dependsOnFieldId;
+                    if (dep.parentFieldId != null) return dep.parentFieldId;
+                    if (dep.optionId != null) {
+                        const opt = fieldOptions.value.find(o => o.id === dep.optionId);
+                        return opt?.fieldId ?? null;
+                    }
+                    return null;
+                }
+
+                function getFieldDependency(fieldId, deps = fieldDependencies.value) {
+                    return deps.find(d => getDependencyChildFieldId(d) === fieldId);
+                }
+
+                function getVisibleFieldDependency(fieldId, categoryId = selectedCategoryId.value) {
+                    const dep = getFieldDependency(fieldId);
+                    if (!dep || !categoryId) return dep;
+                    const sourceFieldId = getDependencySourceFieldId(dep);
+                    const catFieldIds = new Set(getFieldIdsForCategory(categoryId));
+                    return catFieldIds.has(fieldId) && catFieldIds.has(sourceFieldId) ? dep : null;
+                }
+
+                function getOutgoingFieldDependencies(fieldId) {
+                    return fieldDependencies.value.filter(d => getDependencySourceFieldId(d) === fieldId);
+                }
+
+                function getDependencySourceName(fieldId) {
+                    const f = fields.value.find(f => f.id === fieldId);
+                    return f ? getTranslationText(f.translationId) : 'Unknown';
+                }
+
+                function fieldIdsShareCategory(fieldId, dependsOnFieldId) {
+                    const fieldCatIds = new Set(getCategoryIdsForField(fieldId));
+                    return getCategoryIdsForField(dependsOnFieldId).some(catId => fieldCatIds.has(catId));
+                }
+
+                function wouldCreateDependencyCycle(fieldId, dependsOnFieldId, deps = fieldDependencies.value) {
+                    let currentId = dependsOnFieldId;
+                    const visited = new Set();
+                    while (currentId) {
+                        if (currentId === fieldId) return true;
+                        if (visited.has(currentId)) return true;
+                        visited.add(currentId);
+                        const dep = getFieldDependency(currentId, deps);
+                        currentId = getDependencySourceFieldId(dep);
+                    }
+                    return false;
+                }
+
+                function normalizeFieldDependencies(rawDeps = fieldDependencies.value) {
+                    const normalized = [];
+                    const usedFieldIds = new Set();
+
+                    for (const dep of rawDeps || []) {
+                        const fieldId = getDependencyChildFieldId(dep);
+                        const dependsOnFieldId = getDependencySourceFieldId(dep);
+
+                        if (!fieldId || !dependsOnFieldId || fieldId === dependsOnFieldId) continue;
+                        if (usedFieldIds.has(fieldId)) continue;
+                        if (!fields.value.some(f => f.id === fieldId) || !fields.value.some(f => f.id === dependsOnFieldId)) continue;
+                        if (!fieldIdsShareCategory(fieldId, dependsOnFieldId)) continue;
+                        if (wouldCreateDependencyCycle(fieldId, dependsOnFieldId, normalized)) continue;
+
+                        const id = dep.id && !normalized.some(d => d.id === dep.id)
+                            ? dep.id
+                            : generateId(normalized);
+                        normalized.push({ id, fieldId, dependsOnFieldId });
+                        usedFieldIds.add(fieldId);
+                    }
+
+                    return normalized;
+                }
+
+                function normalizeOptionDependencies(rawDeps = optionDependencies.value) {
+                    const normalized = [];
+                    const usedPairs = new Set();
+
+                    for (const dep of rawDeps || []) {
+                        const option = fieldOptions.value.find(o => o.id === dep.optionId);
+                        const visibleOption = fieldOptions.value.find(o => o.id === dep.visibleOptionId);
+                        if (!option || !visibleOption) continue;
+                        if (!fieldIdsShareCategory(option.fieldId, visibleOption.fieldId)) continue;
+
+                        const pairKey = dep.optionId + ':' + dep.visibleOptionId;
+                        if (usedPairs.has(pairKey)) continue;
+                        usedPairs.add(pairKey);
+
+                        const id = dep.id && !normalized.some(d => d.id === dep.id)
+                            ? dep.id
+                            : generateId(normalized);
+                        normalized.push({ id, optionId: dep.optionId, visibleOptionId: dep.visibleOptionId });
+                    }
+
+                    return normalized;
+                }
+
+                function getOptionDepsForOption(optionId) {
+                    return optionDependencies.value.filter(d => d.optionId === optionId);
+                }
+
+                function getOptionFilterDisplay(optionId) {
+                    const deps = optionDependencies.value.filter(d => d.optionId === optionId);
+                    const byField = {};
+                    for (const dep of deps) {
+                        const opt = fieldOptions.value.find(o => o.id === dep.visibleOptionId);
+                        if (!opt) continue;
+                        const fieldId = opt.fieldId;
+                        if (selectedCategoryId.value) {
+                            const catFieldIds = new Set(getFieldIdsForCategory(selectedCategoryId.value));
+                            if (!catFieldIds.has(fieldId)) continue;
+                        }
+                        if (!byField[fieldId]) {
+                            const field = fields.value.find(f => f.id === fieldId);
+                            byField[fieldId] = {
+                                fieldId,
+                                fieldName: field ? getTranslationText(field.translationId) : 'Unknown',
+                                options: []
+                            };
+                        }
+                        byField[fieldId].options.push({
+                            id: opt.id,
+                            label: getTranslationText(opt.labelTranslationId)
+                        });
+                    }
+                    return Object.values(byField);
+                }
+
+                function slugify(text) {
+                    return text.toLowerCase()
+                        .replace(/ä/g, 'ae')
+                        .replace(/ö/g, 'oe')
+                        .replace(/ü/g, 'ue')
+                        .replace(/ß/g, 'ss')
+                        .replace(/\s+/g, '')
+                        .replace(/[^a-z0-9]/g, '');
+                }
+
+                function getFieldIdsForCategory(categoryId) {
+                    return fieldCategories.value
+                        .filter(fc => fc.categoryId === categoryId)
+                        .map(fc => fc.fieldId);
+                }
+
+                function getCategoryIdsForField(fieldId) {
+                    return fieldCategories.value
+                        .filter(fc => fc.fieldId === fieldId)
+                        .map(fc => fc.categoryId);
+                }
+
+                function getAllDescendants(catId) {
+                    const result = [];
+                    const children = categories.value.filter(c => c.parentId === catId);
+                    for (const child of children) {
+                        result.push(child);
+                        result.push(...getAllDescendants(child.id));
+                    }
+                    return result;
+                }
+
+                function getBreadcrumbPathText(categoryId) {
+                    const parts = [];
+                    let currentId = categoryId;
+                    while (currentId) {
+                        const cat = categories.value.find(c => c.id === currentId);
+                        if (!cat) break;
+                        parts.unshift(getTranslationText(cat.translationId));
+                        currentId = cat.parentId;
+                    }
+                    return parts.join(' > ');
+                }
+
+                function computeLevel(categoryId) {
+                    let level = 0;
+                    let currentId = categoryId;
+                    while (currentId) {
+                        const cat = categories.value.find(c => c.id === currentId);
+                        if (!cat || !cat.parentId) break;
+                        level++;
+                        currentId = cat.parentId;
+                    }
+                    return level;
+                }
+
+                function fieldTypeIcon(type) {
+                    const icons = { text: 'fa-font', textarea: 'fa-align-left', number: 'fa-hashtag', select: 'fa-list' };
+                    return 'fas ' + (icons[type] || 'fa-font');
+                }
+
+                function getConfigFieldsForType(type) {
+                    const configs = {
+                        text: [
+                            { key: 'maxLength', label: 'Max Länge', type: 'number' },
+                            { key: 'minLength', label: 'Min Länge', type: 'number' },
+                            { key: 'pattern', label: 'Regex Pattern', type: 'text' }
+                        ],
+                        textarea: [
+                            { key: 'rows', label: 'Zeilen', type: 'number', step: 1 },
+                            { key: 'maxLength', label: 'Max Länge', type: 'number' },
+                            { key: 'minLength', label: 'Min Länge', type: 'number' },
+                            { key: 'pattern', label: 'Regex Pattern', type: 'text' }
+                        ],
+                        number: [
+                            { key: 'min', label: 'Min', type: 'number' },
+                            { key: 'max', label: 'Max', type: 'number' },
+                            { key: 'step', label: 'Schritt', type: 'number' },
+                            { key: 'unit', label: 'Einheit', type: 'text' }
+                        ],
+                        select: [
+                            { key: 'multiple', label: 'Mehrfachauswahl', type: 'checkbox' }
+                        ]
+                    };
+                    return configs[type] || [];
+                }
+
+                function fieldConfigFields(field) {
+                    return getConfigFieldsForType(field.type);
+                }
+
+                function changeFieldType(field, newType) {
+                    field.type = newType;
+                    if (!field.config) field.config = {};
+                    const defaults = { text: {}, textarea: {}, number: {}, select: { multiple: false } };
+                    const cfg = defaults[newType] || {};
+                    field.config = { ...cfg };
+                }
+
+                function updateFieldConfig(field, key, value) {
+                    if (!field.config) field.config = {};
+                    field.config[key] = value;
+                }
+
+                function getOrphanedTranslations() {
+                    const usedIds = new Set();
+                    categories.value.forEach(c => usedIds.add(c.translationId));
+                    fields.value.forEach(f => { usedIds.add(f.translationId); if (f.placeholderTranslationId) usedIds.add(f.placeholderTranslationId); });
+                    fieldOptions.value.forEach(o => usedIds.add(o.labelTranslationId));
+                    return translations.value.filter(t => !usedIds.has(t.id));
+                }
+
+                function createTranslation(values) {
+                    const id = generateId(translations.value);
+                    const trans = { id, translation: {} };
+                    languages.value.forEach(lang => {
+                        trans.translation[lang] = (values && values[lang]) || '';
+                    });
+                    translations.value.push(trans);
+                    return id;
+                }
+
+                // ─── PROJECT ───
+                function newProject() {
+                    const name = prompt('Projektname:');
+                    if (!name) return;
+                    projectName.value = name;
+                    categories.value = [];
+                    fields.value = [];
+                    fieldCategories.value = [];
+                    fieldOptions.value = [];
+                    fieldDependencies.value = [];
+                    optionDependencies.value = [];
+                    translations.value = [];
+                    languages.value = ['de', 'en'];
+                    selectedCategoryId.value = null;
+                    expandedCategoryIds.value = new Set();
+                    hasProject.value = true;
+                }
+
+                function triggerImport() {
+                    fileInput.value.click();
+                }
+
+                function handleFileImport(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = async (event) => {
+                        try {
+                            const zip = await JSZip.loadAsync(event.target.result);
+                            const files = ['categories.json', 'fields.json', 'fieldCategories.json', 'fieldOptions.json', 'fieldDependencies.json', 'optionDependencies.json', 'translations.json'];
+                            const data = {};
+                            for (const name of files) {
+                                const f = zip.file(name);
+                                if (f) {
+                                    data[name] = JSON.parse(await f.async('text'));
+                                } else {
+                                    data[name] = [];
+                                }
+                            }
+                            categories.value = data['categories.json'];
+                            fields.value = data['fields.json'];
+                            fieldCategories.value = data['fieldCategories.json'];
+                            fieldOptions.value = data['fieldOptions.json'];
+                            fieldDependencies.value = normalizeFieldDependencies(data['fieldDependencies.json']);
+                            optionDependencies.value = normalizeOptionDependencies(data['optionDependencies.json']);
+                            translations.value = data['translations.json'];
+
+                            const langs = new Set();
+                            translations.value.forEach(t => {
+                                Object.keys(t.translation || {}).forEach(l => langs.add(l));
+                            });
+                            languages.value = langs.size > 0 ? Array.from(langs).sort() : ['de', 'en'];
+
+                            projectName.value = file.name.replace('.zip', '');
+                            selectedCategoryId.value = null;
+                            expandedCategoryIds.value = new Set();
+                            hasProject.value = true;
+                        } catch (err) {
+                            alert('Fehler beim Import: ' + err.message);
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                    e.target.value = '';
+                }
+
+                async function saveProject() {
+                    computeAllLevels();
+                    fieldDependencies.value = normalizeFieldDependencies();
+                    optionDependencies.value = normalizeOptionDependencies();
+                    const zip = new JSZip();
+                    zip.file('categories.json', JSON.stringify(categories.value, null, 2));
+                    zip.file('fields.json', JSON.stringify(fields.value, null, 2));
+                    zip.file('fieldCategories.json', JSON.stringify(fieldCategories.value, null, 2));
+                    zip.file('fieldOptions.json', JSON.stringify(fieldOptions.value, null, 2));
+                    zip.file('fieldDependencies.json', JSON.stringify(fieldDependencies.value, null, 2));
+                    zip.file('optionDependencies.json', JSON.stringify(optionDependencies.value, null, 2));
+                    zip.file('translations.json', JSON.stringify(translations.value, null, 2));
+
+                    const blob = await zip.generateAsync({ type: 'blob' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = projectName.value + '.zip';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+
+                function computeAllLevels() {
+                    categories.value.forEach(c => {
+                        c.level = computeLevel(c.id);
+                    });
+                }
+
+                // ─── CATEGORY OPERATIONS ───
+                function selectCategory(id) {
+                    selectedCategoryId.value = id;
+                }
+
+                function toggleCategoryExpand(id) {
+                    const set = new Set(expandedCategoryIds.value);
+                    if (set.has(id)) set.delete(id);
+                    else set.add(id);
+                    expandedCategoryIds.value = set;
+                }
+
+                function toggleFieldExpand(id) {
+                    const set = new Set(expandedFieldIds.value);
+                    if (set.has(id)) set.delete(id);
+                    else set.add(id);
+                    expandedFieldIds.value = set;
+                }
+
+                function openAddCategory() {
+                    editingCategory.value = null;
+                    catTransMode.value = 'new';
+                    catTransNew.value = {};
+                    catTransSearch.value = '';
+                    catSelectedTransId.value = null;
+                    catParentSearch.value = '';
+                    catSelectedParentId.value = selectedCategoryId.value || null;
+                    if (catSelectedParentId.value) {
+                        const parent = categories.value.find(c => c.id === catSelectedParentId.value);
+                        if (parent) catParentSearch.value = getBreadcrumbPathText(parent.id);
+                    }
+                    catMetadata.value = [];
+                    showCategoryModal.value = true;
+                }
+
+                function openEditCategory(cat) {
+                    editingCategory.value = { ...cat };
+                    catTransMode.value = 'new';
+                    const t = getTranslation(cat.translationId);
+                    catTransNew.value = t ? { ...t.translation } : {};
+                    catTransSearch.value = t?.translation?.de || '';
+                    catSelectedTransId.value = cat.translationId;
+                    catParentSearch.value = cat.parentId ? getBreadcrumbPathText(cat.parentId) : '';
+                    catSelectedParentId.value = cat.parentId || null;
+                    catMetadata.value = cat.metadata ? Object.entries(cat.metadata).map(([k, v]) => ({ key: k, value: String(v) })) : [];
+                    showCategoryModal.value = true;
+                }
+
+                function closeCategoryModal() {
+                    showCategoryModal.value = false;
+                    editingCategory.value = null;
+                }
+
+                function selectCatTranslation(trans) {
+                    catSelectedTransId.value = trans.id;
+                    catTransSearch.value = trans.translation.de;
+                    catShowTransDropdown.value = false;
+                }
+
+                function selectCatParent(cat) {
+                    catSelectedParentId.value = cat ? cat.id : null;
+                    catParentSearch.value = cat ? getBreadcrumbPathText(cat.id) : '';
+                    catShowParentDropdown.value = false;
+                }
+
+                function saveCategory() {
+                    let translationId;
+
+                    if (catTransMode.value === 'new') {
+                        translationId = createTranslation(catTransNew.value);
+                    } else if (catSelectedTransId.value) {
+                        translationId = catSelectedTransId.value;
+                    } else {
+                        alert('Bitte Übersetzung auswählen oder erstellen.');
+                        return;
+                    }
+
+                    const metaObj = {};
+                    catMetadata.value.forEach(kv => {
+                        if (kv.key.trim()) metaObj[kv.key.trim()] = kv.value;
+                    });
+
+                    if (editingCategory.value) {
+                        const cat = categories.value.find(c => c.id === editingCategory.value.id);
+                        if (cat) {
+                            const oldTransId = cat.translationId;
+                            cat.translationId = translationId;
+                            cat.parentId = catSelectedParentId.value;
+                            cat.metadata = Object.keys(metaObj).length > 0 ? metaObj : null;
+                            if (oldTransId !== translationId) cleanupOrphanedTranslations();
+                        }
+                    } else {
+                        const id = generateId(categories.value);
+                        categories.value.push({
+                            id,
+                            translationId,
+                            parentId: catSelectedParentId.value || null,
+                            level: computeLevel(id),
+                            order: categories.value.filter(c => c.parentId === catSelectedParentId.value).length,
+                            metadata: Object.keys(metaObj).length > 0 ? metaObj : null
+                        });
+                    }
+
+                    closeCategoryModal();
+                }
+
+                // ─── FIELD OPERATIONS ───
+                function openAddField() {
+                    editingField.value = null;
+                    newFieldType.value = 'text';
+                    newFieldRequired.value = false;
+                    newFieldConfig.value = {};
+
+                    fieldNameMode.value = 'new';
+                    fieldNameNew.value = {};
+                    fieldNameSearch.value = '';
+                    fieldSelectedNameId.value = null;
+
+                    fieldPlaceholderMode.value = 'standard';
+                    fieldPlaceholderNew.value = {};
+                    fieldPlaceholderSearch.value = '';
+                    fieldSelectedPlaceholderId.value = null;
+
+                    showFieldModal.value = true;
+                }
+
+                function openEditField(field) {
+                    editingField.value = { ...field };
+                    newFieldType.value = field.type;
+                    newFieldRequired.value = field.required;
+                    newFieldConfig.value = field.config ? { ...field.config } : {};
+
+                    const t = getTranslation(field.translationId);
+                    fieldNameMode.value = 'new';
+                    fieldNameNew.value = t ? { ...t.translation } : {};
+                    fieldNameSearch.value = t?.translation?.de || '';
+                    fieldSelectedNameId.value = field.translationId;
+
+                    const placeholderEqualsName = field.placeholderTranslationId === field.translationId;
+                    const pt = !placeholderEqualsName && field.placeholderTranslationId ? getTranslation(field.placeholderTranslationId) : null;
+                    fieldPlaceholderMode.value = placeholderEqualsName ? 'standard' : 'new';
+                    fieldPlaceholderNew.value = pt ? { ...pt.translation } : {};
+                    fieldPlaceholderSearch.value = pt?.translation?.de || '';
+                    fieldSelectedPlaceholderId.value = placeholderEqualsName ? null : (field.placeholderTranslationId || null);
+
+                    showFieldModal.value = true;
+                }
+
+                function closeFieldModal() {
+                    showFieldModal.value = false;
+                    editingField.value = null;
+                }
+
+                function selectFieldNameTrans(trans) {
+                    fieldSelectedNameId.value = trans.id;
+                    fieldNameSearch.value = trans.translation.de;
+                    fieldShowNameDropdown.value = false;
+                }
+
+                function selectFieldPlaceholderTrans(trans) {
+                    fieldSelectedPlaceholderId.value = trans.id;
+                    fieldPlaceholderSearch.value = trans.translation.de;
+                    fieldShowPlaceholderDropdown.value = false;
+                }
+
+                function saveField() {
+                    let nameId, placeholderId;
+
+                    if (fieldNameMode.value === 'new') {
+                        nameId = createTranslation(fieldNameNew.value);
+                    } else if (fieldSelectedNameId.value) {
+                        nameId = fieldSelectedNameId.value;
+                    } else {
+                        alert('Bitte Feldnamen-Übersetzung auswählen oder erstellen.');
+                        return;
+                    }
+
+                    if (fieldPlaceholderMode.value === 'new') {
+                        const hasContent = languages.value.some(l => (fieldPlaceholderNew.value[l] || '').trim());
+                        placeholderId = hasContent ? createTranslation(fieldPlaceholderNew.value) : null;
+                    } else if (fieldPlaceholderMode.value === 'standard') {
+                        placeholderId = nameId;
+                    } else {
+                        placeholderId = fieldSelectedPlaceholderId.value || null;
+                    }
+
+                        if (editingField.value) {
+                            const f = fields.value.find(f => f.id === editingField.value.id);
+                            if (f) {
+                                const oldNameId = f.translationId;
+                                const wasSelect = f.type === 'select';
+                                f.translationId = nameId;
+                                f.placeholderTranslationId = placeholderId || null;
+                                f.type = newFieldType.value;
+                                f.required = newFieldRequired.value;
+                                f.config = Object.keys(newFieldConfig.value).length > 0 ? { ...newFieldConfig.value } : null;
+
+                                if (wasSelect && newFieldType.value !== 'select') {
+                                    const optsToRemove = fieldOptions.value.filter(o => o.fieldId === f.id).map(o => o.id);
+                                    const optIdSet = new Set(optsToRemove);
+                                    fieldOptions.value = fieldOptions.value.filter(o => o.fieldId !== f.id);
+                                    optionDependencies.value = optionDependencies.value.filter(d =>
+                                        !optIdSet.has(d.optionId) && !optIdSet.has(d.visibleOptionId)
+                                    );
+                                }
+
+                                if (oldNameId !== nameId) cleanupOrphanedTranslations();
+                            }
+                    } else {
+                        const id = generateId(fields.value);
+                        const f = {
+                            id,
+                            translationId: nameId,
+                            type: newFieldType.value,
+                            placeholderTranslationId: placeholderId || null,
+                            required: newFieldRequired.value,
+                            config: Object.keys(newFieldConfig.value).length > 0 ? { ...newFieldConfig.value } : null
+                        };
+                        fields.value.push(f);
+                        fieldCategories.value.push({
+                            id: generateId(fieldCategories.value),
+                            fieldId: id,
+                            categoryId: selectedCategoryId.value,
+                            order: getFieldIdsForCategory(selectedCategoryId.value).length
+                        });
+                    }
+
+                    closeFieldModal();
+                }
+
+                // ─── OPTION OPERATIONS ───
+                const showOptionModal = ref(false);
+                const editingOption = ref(null);
+                const optionFieldId = ref(null);
+                const optionTransMode = ref('new');
+                const optionTransNew = ref({});
+                const optionTransSearch = ref('');
+                const optionSelectedTransId = ref(null);
+                const optionShowTransDropdown = ref(false);
+                const optionValue = ref('');
+
+                const filteredOptionTrans = computed(() => {
+                    if (!optionTransSearch.value) return translations.value;
+                    const q = optionTransSearch.value.toLowerCase();
+                    return translations.value.filter(t =>
+                        (t.translation.de || '').toLowerCase().includes(q) ||
+                        (t.translation.en || '').toLowerCase().includes(q)
+                    );
+                });
+
+                function openAddOption(field) {
+                    editingOption.value = null;
+                    optionFieldId.value = field.id;
+                    optionTransMode.value = 'new';
+                    optionTransNew.value = {};
+                    optionTransSearch.value = '';
+                    optionSelectedTransId.value = null;
+                    optionValue.value = '';
+                    showOptionModal.value = true;
+                }
+
+                function openEditOption(opt) {
+                    editingOption.value = { ...opt };
+                    optionFieldId.value = opt.fieldId;
+                    optionTransMode.value = 'new';
+                    const t = getTranslation(opt.labelTranslationId);
+                    optionTransNew.value = t ? { ...t.translation } : {};
+                    optionTransSearch.value = t?.translation?.de || '';
+                    optionSelectedTransId.value = opt.labelTranslationId;
+                    optionValue.value = opt.value;
+                    showOptionModal.value = true;
+                }
+
+                function closeOptionModal() {
+                    showOptionModal.value = false;
+                    editingOption.value = null;
+                }
+
+                function selectOptionTrans(trans) {
+                    optionSelectedTransId.value = trans.id;
+                    optionTransSearch.value = trans.translation.de;
+                    optionShowTransDropdown.value = false;
+                }
+
+                function saveOption() {
+                    if (!optionValue.value.trim()) {
+                        alert('Bitte einen Slug-Wert eingeben.');
+                        return;
+                    }
+
+                    const existing = fieldOptions.value.filter(o =>
+                        o.fieldId === optionFieldId.value && o.id !== (editingOption.value?.id || -1)
+                    );
+                    if (existing.some(o => o.value === optionValue.value.trim())) {
+                        alert('Dieser Slug existiert bereits für dieses Feld.');
+                        return;
+                    }
+
+                    let labelId;
+                    if (optionTransMode.value === 'new') {
+                        labelId = createTranslation(optionTransNew.value);
+                    } else if (optionSelectedTransId.value) {
+                        labelId = optionSelectedTransId.value;
+                    } else {
+                        alert('Bitte Label-Übersetzung auswählen oder erstellen.');
+                        return;
+                    }
+
+                    if (editingOption.value) {
+                        const opt = fieldOptions.value.find(o => o.id === editingOption.value.id);
+                        if (opt) {
+                            const oldLabelId = opt.labelTranslationId;
+                            opt.labelTranslationId = labelId;
+                            opt.value = optionValue.value.trim();
+                            if (oldLabelId !== labelId) cleanupOrphanedTranslations();
+                        }
+                    } else {
+                        fieldOptions.value.push({
+                            id: generateId(fieldOptions.value),
+                            fieldId: optionFieldId.value,
+                            labelTranslationId: labelId,
+                            value: optionValue.value.trim(),
+                            order: existing.length
+                        });
+                    }
+
+                    closeOptionModal();
+                }
+
+                // ─── DEPENDENCY OPERATIONS ───
+                function openAddDependency(field) {
+                    depPickerFieldId.value = field.id;
+                    depPickerFieldLabel.value = getTranslationText(field.translationId);
+                    depSearch.value = '';
+                    showDepPicker.value = true;
+                }
+
+                function addDependency(dependsOnFieldId) {
+                    const fieldId = depPickerFieldId.value;
+                    if (!fieldId || fieldId === dependsOnFieldId) return;
+                    if (!fieldIdsShareCategory(fieldId, dependsOnFieldId)) return;
+                    if (wouldCreateDependencyCycle(fieldId, dependsOnFieldId)) return;
+
+                    fieldDependencies.value = fieldDependencies.value.filter(d => getDependencyChildFieldId(d) !== fieldId);
+                    fieldDependencies.value.push({
+                        id: generateId(fieldDependencies.value),
+                        fieldId,
+                        dependsOnFieldId
+                    });
+                    showDepPicker.value = false;
+                }
+
+                function removeDependency(depId) {
+                    fieldDependencies.value = fieldDependencies.value.filter(d => d.id !== depId);
+                }
+
+                // ─── OPTION DEPENDENCY OPERATIONS ───
+                function openOptionFilterModal(opt) {
+                    optionFilterTriggerOptionId.value = opt.id;
+                    optionFilterTriggerLabel.value = getTranslationText(opt.labelTranslationId);
+                    optionFilterSearch.value = '';
+                    showOptionFilterModal.value = true;
+                }
+
+                function toggleOptionDependency(visibleOptionId) {
+                    const triggerId = optionFilterTriggerOptionId.value;
+                    if (!triggerId) return;
+
+                    const existing = optionDependencies.value.find(d =>
+                        d.optionId === triggerId && d.visibleOptionId === visibleOptionId
+                    );
+
+                    if (existing) {
+                        optionDependencies.value = optionDependencies.value.filter(d => d.id !== existing.id);
+                        return;
+                    }
+
+                    const dep = { id: generateId(optionDependencies.value), optionId: triggerId, visibleOptionId };
+                    optionDependencies.value.push(dep);
+                }
+
+                function removeOptionDepGroup(triggerOptionId, fieldId) {
+                    const optIds = new Set(fieldOptions.value.filter(o => o.fieldId === fieldId).map(o => o.id));
+                    optionDependencies.value = optionDependencies.value.filter(d =>
+                        !(d.optionId === triggerOptionId && optIds.has(d.visibleOptionId))
+                    );
+                }
+
+                // ─── SORT ───
+                function sortRootCategories() {
+                    const roots = categories.value.filter(c => !c.parentId);
+                    const sorted = [...roots].sort((a, b) =>
+                        getTranslationText(a.translationId).localeCompare(getTranslationText(b.translationId), 'de')
+                    );
+                    sorted.forEach((c, i) => {
+                        const cat = categories.value.find(x => x.id === c.id);
+                        if (cat) cat.order = i;
+                    });
+                }
+
+                function sortFields() {
+                    if (!selectedCategoryId.value) return;
+                    const catFieldEntries = fieldCategories.value.filter(fc => fc.categoryId === selectedCategoryId.value);
+                    const sorted = [...catFieldEntries].sort((a, b) => {
+                        const fa = fields.value.find(f => f.id === a.fieldId);
+                        const fb = fields.value.find(f => f.id === b.fieldId);
+                        if (!fa || !fb) return 0;
+                        return getTranslationText(fa.translationId).localeCompare(getTranslationText(fb.translationId), 'de');
+                    });
+                    sorted.forEach((entry, i) => {
+                        const fc = fieldCategories.value.find(x => x.id === entry.id);
+                        if (fc) fc.order = i;
+                    });
+                }
+
+                function sortOptions(field) {
+                    const opts = fieldOptions.value.filter(o => o.fieldId === field.id);
+                    const sorted = [...opts].sort((a, b) =>
+                        getTranslationText(a.labelTranslationId).localeCompare(getTranslationText(b.labelTranslationId), 'de')
+                    );
+                    sorted.forEach((o, i) => {
+                        const opt = fieldOptions.value.find(x => x.id === o.id);
+                        if (opt) opt.order = i;
+                    });
+                }
+
+                // ─── DELETE ───
+                function confirmDelete(type, item) {
+                    const preview = [];
+                    deleteLocalAction.value = null;
+                    deletePrimaryLabel.value = 'Löschen';
+                    deleteLocalLabel.value = '';
+
+                    if (type === 'category') {
+                        const descendants = getAllDescendants(item.id);
+                        const deleteCatIds = new Set([item.id, ...descendants.map(d => d.id)]);
+                        const catFieldIds = new Set(
+                            fieldCategories.value
+                                .filter(fc => deleteCatIds.has(fc.categoryId))
+                                .map(fc => fc.fieldId)
+                        );
+                        const catFields = fields.value.filter(f => catFieldIds.has(f.id));
+                        const catOptions = fieldOptions.value.filter(o => catFieldIds.has(o.fieldId));
+                        const catOptionIds = new Set(catOptions.map(o => o.id));
+                        const catDeps = fieldDependencies.value.filter(d =>
+                            catFieldIds.has(getDependencyChildFieldId(d)) || catFieldIds.has(getDependencySourceFieldId(d))
+                        );
+                        const catOptionDeps = optionDependencies.value.filter(d =>
+                            catOptionIds.has(d.optionId) || catOptionIds.has(d.visibleOptionId)
+                        );
+
+                        preview.push({ id: 'cat-' + item.id, depth: 0, label: getTranslationText(item.translationId) + ' (Kategorie)', icon: 'fas fa-folder' });
+                        descendants.forEach(d => preview.push({ id: 'dsc-' + d.id, depth: 1, label: getTranslationText(d.translationId), icon: 'fas fa-folder-open' }));
+                        catFields.forEach(f => preview.push({ id: 'fld-' + f.id, depth: 2, label: getTranslationText(f.translationId) + ' (Feld)', icon: 'fas fa-cube' }));
+                        catOptions.forEach(o => preview.push({ id: 'opt-' + o.id, depth: 3, label: getTranslationText(o.labelTranslationId), icon: 'fas fa-circle' }));
+                        catDeps.forEach(d => preview.push({ id: 'dep-' + d.id, depth: 4, label: 'Feld-Abhängigkeit', icon: 'fas fa-link' }));
+                        catOptionDeps.forEach(d => preview.push({ id: 'optdep-' + d.id, depth: 4, label: 'Optionen-Filter', icon: 'fas fa-filter' }));
+
+                        const usedTransIds = new Set();
+                        categories.value.forEach(c => { if (!deleteCatIds.has(c.id)) usedTransIds.add(c.translationId); });
+                        fields.value.forEach(f => { if (!catFieldIds.has(f.id)) { usedTransIds.add(f.translationId); if (f.placeholderTranslationId) usedTransIds.add(f.placeholderTranslationId); } });
+                        fieldOptions.value.forEach(o => { if (!catOptionIds.has(o.id)) usedTransIds.add(o.labelTranslationId); });
+
+                        const orphaned = translations.value.filter(t => !usedTransIds.has(t.id));
+                        orphaned.forEach(t => preview.push({ id: 'orph-' + t.id, depth: 2, label: t.translation.de + ' (unbenutzte Übersetzung)', icon: 'fas fa-language text-[#6b635a]' }));
+
+                        deletePrimaryLabel.value = 'Komplett löschen';
+                        deleteLocalLabel.value = 'Nur Kategorie löschen';
+                        deleteLocalAction.value = () => {
+                            const localFieldIdsToDelete = new Set(
+                                [...catFieldIds].filter(fieldId =>
+                                    getCategoryIdsForField(fieldId).every(catId => deleteCatIds.has(catId))
+                                )
+                            );
+                            const localOptionIdsToDelete = new Set(
+                                fieldOptions.value
+                                    .filter(o => localFieldIdsToDelete.has(o.fieldId))
+                                    .map(o => o.id)
+                            );
+
+                            categories.value = categories.value.filter(c => !deleteCatIds.has(c.id));
+                            fieldCategories.value = fieldCategories.value.filter(fc => !deleteCatIds.has(fc.categoryId));
+                            fields.value = fields.value.filter(f => !localFieldIdsToDelete.has(f.id));
+                            fieldOptions.value = fieldOptions.value.filter(o => !localOptionIdsToDelete.has(o.id));
+                            fieldDependencies.value = fieldDependencies.value.filter(d =>
+                                !localFieldIdsToDelete.has(getDependencyChildFieldId(d)) &&
+                                !localFieldIdsToDelete.has(getDependencySourceFieldId(d))
+                            );
+                            fieldDependencies.value = normalizeFieldDependencies();
+                            optionDependencies.value = optionDependencies.value.filter(d =>
+                                !localOptionIdsToDelete.has(d.optionId) && !localOptionIdsToDelete.has(d.visibleOptionId)
+                            );
+                            optionDependencies.value = normalizeOptionDependencies();
+                            cleanupOrphanedTranslations();
+                            if (selectedCategoryId.value && deleteCatIds.has(selectedCategoryId.value)) {
+                                selectedCategoryId.value = null;
+                            }
+                        };
+
+                        deleteAction.value = () => {
+                            categories.value = categories.value.filter(c => !deleteCatIds.has(c.id));
+                            fieldCategories.value = fieldCategories.value.filter(fc => !deleteCatIds.has(fc.categoryId));
+                            fields.value = fields.value.filter(f => !catFieldIds.has(f.id));
+                            fieldOptions.value = fieldOptions.value.filter(o => !catOptionIds.has(o.id));
+                            fieldDependencies.value = fieldDependencies.value.filter(d =>
+                                !catFieldIds.has(getDependencyChildFieldId(d)) && !catFieldIds.has(getDependencySourceFieldId(d))
+                            );
+                            fieldDependencies.value = normalizeFieldDependencies();
+                            optionDependencies.value = optionDependencies.value.filter(d => !catOptionIds.has(d.optionId) && !catOptionIds.has(d.visibleOptionId));
+                            translations.value = translations.value.filter(t => usedTransIds.has(t.id));
+                            optionDependencies.value = normalizeOptionDependencies();
+                            if (selectedCategoryId.value && deleteCatIds.has(selectedCategoryId.value)) {
+                                selectedCategoryId.value = null;
+                            }
+                        };
+                    } else if (type === 'field') {
+                        const catIds = getCategoryIdsForField(item.id);
+                        const isShared = catIds.length > 1;
+                        const fOpts = fieldOptions.value.filter(o => o.fieldId === item.id);
+                        const fOptIds = new Set(fOpts.map(o => o.id));
+                        const fDeps = fieldDependencies.value.filter(d =>
+                            getDependencyChildFieldId(d) === item.id || getDependencySourceFieldId(d) === item.id
+                        );
+                        const fOptDeps = optionDependencies.value.filter(d => fOptIds.has(d.optionId) || fOptIds.has(d.visibleOptionId));
+
+                        if (isShared) {
+                            const catNames = catIds.map(cid => {
+                                const c = categories.value.find(x => x.id === cid);
+                                return c ? getTranslationText(c.translationId) : '?';
+                            });
+                            preview.push({ id: 'fld-shared', depth: 0, label: 'Geteilt mit: ' + catNames.join(', '), icon: 'fas fa-share-alt text-[#d4a853]' });
+                        }
+
+                        preview.push({ id: 'fld-' + item.id, depth: 0, label: getTranslationText(item.translationId) + (isShared ? ' (Feld, alle Referenzen)' : ' (Feld)'), icon: 'fas fa-cube' });
+                        fOpts.forEach(o => preview.push({ id: 'opt-' + o.id, depth: 1, label: getTranslationText(o.labelTranslationId), icon: 'fas fa-circle' }));
+                        fDeps.forEach(d => preview.push({ id: 'dep-' + d.id, depth: 1, label: 'Feld-Abhängigkeit', icon: 'fas fa-link' }));
+                        fOptDeps.forEach(d => preview.push({ id: 'optdep-' + d.id, depth: 1, label: 'Optionen-Filter', icon: 'fas fa-filter' }));
+
+                        deletePrimaryLabel.value = isShared ? 'Komplett löschen' : 'Löschen';
+                        if (isShared && selectedCategoryId.value && catIds.includes(selectedCategoryId.value)) {
+                            const currentCategoryId = selectedCategoryId.value;
+                            deleteLocalLabel.value = 'Nur aus Kategorie entfernen';
+                            deleteLocalAction.value = () => {
+                                fieldCategories.value = fieldCategories.value.filter(fc =>
+                                    !(fc.fieldId === item.id && fc.categoryId === currentCategoryId)
+                                );
+                                fieldDependencies.value = normalizeFieldDependencies();
+                                optionDependencies.value = normalizeOptionDependencies();
+                                cleanupOrphanedTranslations();
+                            };
+                        }
+
+                        deleteAction.value = () => {
+                            fieldCategories.value = fieldCategories.value.filter(fc => fc.fieldId !== item.id);
+                            fields.value = fields.value.filter(f => f.id !== item.id);
+                            fieldOptions.value = fieldOptions.value.filter(o => o.fieldId !== item.id);
+                            fieldDependencies.value = fieldDependencies.value.filter(d =>
+                                getDependencyChildFieldId(d) !== item.id && getDependencySourceFieldId(d) !== item.id
+                            );
+                            fieldDependencies.value = normalizeFieldDependencies();
+                            optionDependencies.value = optionDependencies.value.filter(d => !fOptIds.has(d.optionId) && !fOptIds.has(d.visibleOptionId));
+                            optionDependencies.value = normalizeOptionDependencies();
+                            cleanupOrphanedTranslations();
+                        };
+                    } else if (type === 'option') {
+                        const oOptDeps = optionDependencies.value.filter(d => d.optionId === item.id || d.visibleOptionId === item.id);
+                        preview.push({ id: 'opt-' + item.id, depth: 0, label: getTranslationText(item.labelTranslationId), icon: 'fas fa-circle' });
+                        oOptDeps.forEach(d => preview.push({ id: 'optdep-' + d.id, depth: 1, label: 'Optionen-Filter', icon: 'fas fa-filter' }));
+
+                        deleteAction.value = () => {
+                            fieldOptions.value = fieldOptions.value.filter(o => o.id !== item.id);
+                            optionDependencies.value = optionDependencies.value.filter(d => d.optionId !== item.id && d.visibleOptionId !== item.id);
+                            optionDependencies.value = normalizeOptionDependencies();
+                            cleanupOrphanedTranslations();
+                        };
+                    }
+
+                    deletePreview.value = preview;
+                    showDeleteModal.value = true;
+                }
+
+                function executeDelete() {
+                    if (deleteAction.value) deleteAction.value();
+                    showDeleteModal.value = false;
+                    deletePreview.value = [];
+                    deleteAction.value = null;
+                    deleteLocalAction.value = null;
+                    deletePrimaryLabel.value = 'Löschen';
+                    deleteLocalLabel.value = '';
+                }
+
+                function executeLocalDelete() {
+                    if (deleteLocalAction.value) deleteLocalAction.value();
+                    showDeleteModal.value = false;
+                    deletePreview.value = [];
+                    deleteAction.value = null;
+                    deleteLocalAction.value = null;
+                    deletePrimaryLabel.value = 'Löschen';
+                    deleteLocalLabel.value = '';
+                }
+
+                function hasMissingTranslation(translationId) {
+                    if (!translationId) return false;
+                    const t = getTranslation(translationId);
+                    if (!t) return true;
+                    return languages.value.some(l => !(t.translation[l] || '').trim());
+                }
+
+                function getMissingLanguages(translationId) {
+                    const t = getTranslation(translationId);
+                    if (!t) return [...languages.value];
+                    return languages.value.filter(l => !(t.translation[l] || '').trim());
+                }
+
+                function getEntityWarningType(type, id) {
+                    if (type === 'category') {
+                        const cat = categories.value.find(c => c.id === id);
+                        if (!cat) return null;
+                        if (hasMissingTranslation(cat.translationId)) return 'missing';
+                        const allIds = new Set([id, ...getAllDescendants(id).map(d => d.id)]);
+                        const allFieldIds = new Set(
+                            fieldCategories.value.filter(fc => allIds.has(fc.categoryId)).map(fc => fc.fieldId)
+                        );
+                        const anyChildMissing = [...allIds].some(cId => {
+                            const c = categories.value.find(x => x.id === cId);
+                            return c && hasMissingTranslation(c.translationId);
+                        }) || fields.value.filter(f => allFieldIds.has(f.id)).some(f =>
+                            hasMissingTranslation(f.translationId) ||
+                            getFieldOptionsList(f.id).some(o => hasMissingTranslation(o.labelTranslationId))
+                        );
+                        return anyChildMissing ? 'children-missing' : null;
+                    }
+                    if (type === 'field') {
+                        const field = fields.value.find(f => f.id === id);
+                        if (!field) return null;
+                        if (hasMissingTranslation(field.translationId)) return 'missing';
+                        return getFieldOptionsList(id).some(o => hasMissingTranslation(o.labelTranslationId))
+                            ? 'children-missing' : null;
+                    }
+                    if (type === 'option') {
+                        const opt = fieldOptions.value.find(o => o.id === id);
+                        if (!opt) return null;
+                        return hasMissingTranslation(opt.labelTranslationId) ? 'missing' : null;
+                    }
+                    return null;
+                }
+
+                function cleanupOrphanedTranslations() {
+                    const usedIds = new Set();
+                    categories.value.forEach(c => usedIds.add(c.translationId));
+                    fields.value.forEach(f => { usedIds.add(f.translationId); if (f.placeholderTranslationId) usedIds.add(f.placeholderTranslationId); });
+                    fieldOptions.value.forEach(o => usedIds.add(o.labelTranslationId));
+                    translations.value = translations.value.filter(t => usedIds.has(t.id));
+                }
+
+                // ─── LANGUAGES ───
+                function addLanguage(code) {
+                    if (!languages.value.includes(code)) {
+                        languages.value.push(code);
+                        languages.value.sort();
+                    }
+                    languageSearch.value = '';
+                }
+
+                function confirmRemoveLanguage(code) {
+                    const count = translations.value.filter(t => t.translation[code]).length;
+                    const lang = ISO_LANGUAGES.find(l => l.code === code);
+                    removeLangInfo.value = { code, name: lang?.name || code, count };
+                    showRemoveLangModal.value = true;
+                }
+
+                function executeRemoveLanguage() {
+                    const code = removeLangInfo.value.code;
+                    translations.value.forEach(t => delete t.translation[code]);
+                    languages.value = languages.value.filter(l => l !== code);
+                    showRemoveLangModal.value = false;
+                    removeLangInfo.value = null;
+                }
+
+                function getLanguageName(code) {
+                    const lang = ISO_LANGUAGES.find(l => l.code === code);
+                    return lang ? lang.name : code;
+                }
+
+                // ─── SORTABLE ───
+                let treeSortable = null;
+
+                function initTreeSortable() {
+                    const container = treeContainer.value;
+                    if (!container) return;
+                    if (treeSortable) treeSortable.destroy();
+                    treeSortable = Sortable.create(container, {
+                        handle: '.fa-grip-vertical',
+                        animation: 200,
+                        ghostClass: 'sortable-ghost',
+                        dragClass: 'sortable-drag',
+                        onEnd: () => {
+                            const items = [...container.querySelectorAll(':scope > div')];
+                            items.forEach((el, idx) => {
+                                const id = parseInt(el.dataset.id);
+                                const cat = categories.value.find(c => c.id === id);
+                                if (cat) cat.order = idx;
+                            });
+                        }
+                    });
+                }
+
+                function initFieldSortable() {
+                    document.querySelectorAll('.field-sortable-container').forEach(container => {
+                        if (container._fieldSortable) container._fieldSortable.destroy();
+                        container._fieldSortable = Sortable.create(container, {
+                            handle: '.handle-field',
+                            animation: 200,
+                            ghostClass: 'sortable-ghost',
+                            dragClass: 'sortable-drag',
+                            onEnd: () => {
+                                if (!selectedCategoryId.value) return;
+                                const items = [...container.querySelectorAll(':scope > .card')];
+                                items.forEach((el, idx) => {
+                                    const id = parseInt(el.dataset.fieldId);
+                                    const fc = fieldCategories.value.find(fc2 => fc2.fieldId === id && fc2.categoryId === selectedCategoryId.value);
+                                    if (fc) fc.order = idx;
+                                });
+                            }
+                        });
+                    });
+                }
+
+                function initOptionSortable() {
+                    document.querySelectorAll('.option-sortable-container').forEach(container => {
+                        if (container._optionSortable) container._optionSortable.destroy();
+                        container._optionSortable = Sortable.create(container, {
+                            handle: '.handle-option',
+                            animation: 200,
+                            ghostClass: 'sortable-ghost',
+                            dragClass: 'sortable-drag',
+                            onEnd: () => {
+                                const items = [...container.querySelectorAll(':scope > div')];
+                                items.forEach((el, idx) => {
+                                    const id = parseInt(el.dataset.optId);
+                                    const o = fieldOptions.value.find(o2 => o2.id === id);
+                                    if (o) o.order = idx;
+                                });
+                            }
+                        });
+                    });
+                }
+
+                function reinitSortable() {
+                    nextTick(() => {
+                        initTreeSortable();
+                        initFieldSortable();
+                        initOptionSortable();
+                    });
+                }
+
+                onMounted(() => {
+                    if (hasProject.value) reinitSortable();
+                });
+
+                onUpdated(() => {
+                    reinitSortable();
+                });
+
+                return {
+                    hasProject, projectName, categories, fields, fieldCategories, fieldOptions, fieldDependencies, optionDependencies, translations, languages,
+                    selectedCategoryId, expandedCategoryIds, expandedFieldIds, searchQuery, fileInput, treeContainer, fieldTypes,
+                    selectedCategory, selectedCategoryName, currentBreadcrumbs, currentFields, flatTree,
+                    filteredCatTranslations, filteredCatParents, filteredFieldNameTrans, filteredFieldPlaceholderTrans,
+                    filteredLanguages, filteredDepFields,
+                    newFieldType, newFieldRequired, newFieldConfig, newFieldConfigFields,
+                    showCategoryModal, editingCategory, catTransMode, catTransNew, catTransSearch, catSelectedTransId,
+                    catShowTransDropdown, catParentSearch, catSelectedParentId, catShowParentDropdown, catMetadata,
+                    showFieldModal, editingField, fieldNameMode, fieldNameNew, fieldNameSearch, fieldSelectedNameId,
+                    fieldShowNameDropdown, fieldPlaceholderMode, fieldPlaceholderNew, fieldPlaceholderSearch,
+                    fieldSelectedPlaceholderId, fieldShowPlaceholderDropdown,
+                    showOptionModal, editingOption, optionFieldId, optionTransMode, optionTransNew, optionTransSearch,
+                    optionSelectedTransId, optionShowTransDropdown, filteredOptionTrans, optionValue,
+                    showDepPicker, depPickerFieldId, depPickerFieldLabel, depSearch,
+                    showCopyModal, copySourceField, copyCategorySearch, copySelectedCategoryIds,
+                    filteredCopyCategories, openCopyModal, toggleCopyCategory, executeDeepCopy, executeReferenceCopy,
+                    showOptionFilterModal, optionFilterTriggerOptionId, optionFilterTriggerLabel, optionFilterSearch, optionFilterGroupedComputed,
+                    showDeleteModal, deletePreview, deleteLocalAction, deletePrimaryLabel, deleteLocalLabel,
+                    showTransPicker, transPickerSearch, filteredTransPicker, openTranslationPicker, selectTransPicker,
+                    showLanguageModal, languageSearch, showLanguageDropdown, showRemoveLangModal, removeLangInfo,
+                    getTranslation, getTranslationText, getTranslationValue, updateTranslation, getChildCount,
+                    getFieldOptionsList, getFieldDependency, getVisibleFieldDependency, getDependencySourceFieldId, getDependencySourceName,
+                    getOptionDepsForOption, getOptionFilterDisplay,
+                    getBreadcrumbPathText, slugify, fieldTypeIcon, fieldConfigFields, changeFieldType, updateFieldConfig,
+                    hasMissingTranslation, getMissingLanguages, getEntityWarningType,
+                    selectCategory, toggleCategoryExpand, toggleFieldExpand,
+                    openAddCategory, openEditCategory, closeCategoryModal, selectCatTranslation, selectCatParent, saveCategory,
+                    openAddField, openEditField, closeFieldModal, selectFieldNameTrans, selectFieldPlaceholderTrans, saveField,
+                    openAddOption, openEditOption, closeOptionModal, selectOptionTrans, saveOption,
+                    openAddDependency, addDependency, removeDependency,
+                    openOptionFilterModal, toggleOptionDependency, removeOptionDepGroup,
+                    sortRootCategories, sortFields, sortOptions,
+                    confirmDelete, executeDelete, executeLocalDelete,
+                    newProject, triggerImport, handleFileImport, saveProject,
+                    addLanguage, confirmRemoveLanguage, executeRemoveLanguage, getLanguageName,
+                    ISO_LANGUAGES
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
