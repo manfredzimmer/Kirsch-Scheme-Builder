@@ -438,6 +438,10 @@
                                             class="fas fa-link text-[#d4a853] text-[10px]"
                                             :title="'Abhängig von: ' + getDependencySourceName(getDependencySourceFieldId(getVisibleFieldDependency(field.id)))">
                                         </i>
+                                        <i v-if="getVisibleFieldDependency(field.id) && getVisibleFieldDependency(field.id).includeWhen !== undefined"
+                                            class="fas fa-toggle-on text-[#d4a853] text-[10px] ml-0.5"
+                                            :title="'Von Boolean gesteuert: ' + (getVisibleFieldDependency(field.id).includeWhen ? 'true' : 'false')">
+                                        </i>
                                         <button @click.stop="openCopyModal(field)"
                                             class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-xs">
                                             <i class="fas fa-copy"></i>
@@ -518,6 +522,7 @@
                                                         type="number" :step="cfg.step || 'any'"
                                                         class="input-field flex-1 px-2 py-1 rounded text-xs">
                                                     <input v-else-if="cfg.type === 'checkbox'"
+                                                        :key="'cfg-' + field.id + '-' + cfg.key + '-' + (field.config?.[cfg.key] ?? false)"
                                                         :checked="field.config?.[cfg.key] ?? false"
                                                         @change="updateFieldConfig(field, cfg.key, $event.target.checked)"
                                                         type="checkbox" class="accent-[#d4a853]">
@@ -531,8 +536,8 @@
 
                                         <!-- Required toggle -->
                                         <div class="flex items-center gap-2">
-                                            <input :checked="field.required"
-                                                @change="field.required = $event.target.checked"
+                                            <input :key="'req-' + field.required"
+                                                v-model="field.required"
                                                 type="checkbox" class="accent-[#d4a853]">
                                             <label class="text-xs text-[#a89f94]">Required</label>
                                         </div>
@@ -545,7 +550,14 @@
                                                     <div v-if="getVisibleFieldDependency(field.id)"
                                                         class="flex items-center gap-2 text-xs text-[#a89f94]">
                                                         <i class="fas fa-arrow-right text-[#6b635a]"></i>
-                                                        <span>Wird angezeigt, wenn <strong class="text-amber-50">{{ getDependencySourceName(getDependencySourceFieldId(getVisibleFieldDependency(field.id))) }}</strong> ausgefüllt ist</span>
+                                                        <span>Wird angezeigt, wenn <strong class="text-amber-50">{{ getDependencySourceName(getDependencySourceFieldId(getVisibleFieldDependency(field.id))) }}</strong>
+                                                            <template v-if="getVisibleFieldDependency(field.id).includeWhen !== undefined">
+                                                                <strong class="text-amber-50">{{ getVisibleFieldDependency(field.id).includeWhen ? 'true' : 'false' }}</strong> ist
+                                                            </template>
+                                                            <template v-else>
+                                                                ausgefüllt ist
+                                                            </template>
+                                                        </span>
                                                         <button @click="removeDependency(getVisibleFieldDependency(field.id).id)"
                                                             class="text-[#c44536] hover:text-[#d9584a] ml-1">
                                                             <i class="fas fa-times-circle"></i>
@@ -557,6 +569,39 @@
                                                     class="text-xs text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
                                                     <i class="fas fa-plus-circle mr-1"></i>{{ getVisibleFieldDependency(field.id) ? 'Ändern' : 'Abhängigkeit' }}
                                                 </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Boolean Control -->
+                                        <div v-if="field.type === 'boolean'">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <label class="text-xs text-[#a89f94]">Steuerung</label>
+                                            </div>
+                                            <div class="bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-2 space-y-2">
+                                                <div class="flex items-center justify-between gap-2">
+                                                    <span class="text-xs text-[#a89f94] shrink-0">Bei <strong class="text-amber-50">true</strong> anzeigen:</span>
+                                                    <template v-if="getBooleanControlledField(field.id, true)">
+                                                        <span class="text-xs text-amber-50">{{ getTranslationText(getBooleanControlledField(field.id, true).translationId) }}</span>
+                                                        <button @click="removeBooleanControl(field.id, true)" class="text-[#c44536] hover:text-[#d9584a] text-xs shrink-0">
+                                                            <i class="fas fa-times-circle"></i>
+                                                        </button>
+                                                    </template>
+                                                    <button v-else @click="openBooleanControlPicker(field, true)" class="text-xs text-[#d4a853] hover:text-[#e8c278] shrink-0">
+                                                        <i class="fas fa-plus-circle mr-1"></i>Feld
+                                                    </button>
+                                                </div>
+                                                <div class="flex items-center justify-between gap-2">
+                                                    <span class="text-xs text-[#a89f94] shrink-0">Bei <strong class="text-amber-50">false</strong> anzeigen:</span>
+                                                    <template v-if="getBooleanControlledField(field.id, false)">
+                                                        <span class="text-xs text-amber-50">{{ getTranslationText(getBooleanControlledField(field.id, false).translationId) }}</span>
+                                                        <button @click="removeBooleanControl(field.id, false)" class="text-[#c44536] hover:text-[#d9584a] text-xs shrink-0">
+                                                            <i class="fas fa-times-circle"></i>
+                                                        </button>
+                                                    </template>
+                                                    <button v-else @click="openBooleanControlPicker(field, false)" class="text-xs text-[#d4a853] hover:text-[#e8c278] shrink-0">
+                                                        <i class="fas fa-plus-circle mr-1"></i>Feld
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -927,6 +972,33 @@
             </div>
         </div>
 
+        <!-- Boolean Control Picker (small overlay) -->
+        <div v-if="showBooleanControlPicker" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-xl shadow-2xl w-full max-w-sm animate-slide">
+                <div class="px-5 py-4 border-b border-[#3d3528] flex items-center justify-between">
+                    <h3 class="font-display text-lg">Feld auswählen</h3>
+                    <button @click="showBooleanControlPicker = false" class="icon-btn p-1 rounded hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-5 py-4">
+                    <p class="text-xs text-[#a89f94] mb-3">Bei <strong class="text-amber-50">{{ booleanControlPickerValue ? 'true' : 'false' }}</strong> folgendes Feld anzeigen:</p>
+                    <div class="relative">
+                        <input v-model="booleanControlPickerSearch" type="text" placeholder="Feld suchen..."
+                            class="input-field w-full px-4 py-2 rounded-lg text-sm">
+                        <div class="searchable-select-dropdown w-full rounded-lg mt-1 relative">
+                            <div v-for="f in getAvailableBooleanControlFields(booleanControlPickerFieldId)" :key="f.id" @click="setBooleanControl(booleanControlPickerFieldId, f.id, booleanControlPickerValue)"
+                                class="flex items-center gap-2 px-4 py-2 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0 text-sm">
+                                <span class="flex-1">{{ getTranslationText(f.translationId) }}</span>
+                                <span class="text-[10px] text-[#6b635a]">({{ f.type }})</span>
+                            </div>
+                            <div v-if="getAvailableBooleanControlFields(booleanControlPickerFieldId).length === 0" class="px-4 py-2 text-[#6b635a] text-sm">Keine Felder verfügbar</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Option Filter Modal -->
         <div v-if="showOptionFilterModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
             <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
@@ -1155,7 +1227,7 @@
                 const fileInput = ref(null);
                 const treeContainer = ref(null);
 
-                const fieldTypes = ['text', 'textarea', 'number', 'select'];
+                const fieldTypes = ['text', 'textarea', 'number', 'select', 'boolean'];
 
                 // ─── CATEGORY MODAL STATE ───
                 const showCategoryModal = ref(false);
@@ -1612,7 +1684,9 @@
                         const id = dep.id && !normalized.some(d => d.id === dep.id)
                             ? dep.id
                             : generateId(normalized);
-                        normalized.push({ id, fieldId, dependsOnFieldId });
+                        const entry = { id, fieldId, dependsOnFieldId };
+                        if (dep.includeWhen !== undefined) entry.includeWhen = dep.includeWhen;
+                        normalized.push(entry);
                         usedFieldIds.add(fieldId);
                     }
 
@@ -1673,6 +1747,73 @@
                     return Object.values(byField);
                 }
 
+                // ─── BOOLEAN CONTROL ───
+                const showBooleanControlPicker = ref(false);
+                const booleanControlPickerFieldId = ref(null);
+                const booleanControlPickerValue = ref(true);
+                const booleanControlPickerSearch = ref('');
+
+                function getBooleanControlledField(booleanFieldId, includeWhen) {
+                    const dep = fieldDependencies.value.find(d =>
+                        getDependencySourceFieldId(d) === booleanFieldId &&
+                        d.includeWhen === includeWhen
+                    );
+                    if (!dep) return null;
+                    return fields.value.find(f => f.id === dep.fieldId) || null;
+                }
+
+                function getAvailableBooleanControlFields(booleanFieldId) {
+                    if (!selectedCategoryId.value) return [];
+                    const catFieldIds = new Set(getFieldIdsForCategory(selectedCategoryId.value));
+                    const alreadyDependentIds = new Set(
+                        fieldDependencies.value.map(d => d.fieldId)
+                    );
+                    const q = booleanControlPickerSearch.value.toLowerCase();
+                    return fields.value.filter(f =>
+                        catFieldIds.has(f.id) &&
+                        f.id !== booleanFieldId &&
+                        !alreadyDependentIds.has(f.id) &&
+                        !wouldCreateDependencyCycle(f.id, booleanFieldId) &&
+                        getTranslationText(f.translationId).toLowerCase().includes(q)
+                    );
+                }
+
+                function openBooleanControlPicker(field, value) {
+                    booleanControlPickerFieldId.value = field.id;
+                    booleanControlPickerValue.value = value;
+                    booleanControlPickerSearch.value = '';
+                    showBooleanControlPicker.value = true;
+                }
+
+                function setBooleanControl(booleanFieldId, controlledFieldId, includeWhen) {
+                    const existingForField = fieldDependencies.value.find(d =>
+                        getDependencyChildFieldId(d) === controlledFieldId
+                    );
+                    if (existingForField) {
+                        fieldDependencies.value = fieldDependencies.value.filter(d => d.id !== existingForField.id);
+                    }
+                    const existingDep = fieldDependencies.value.find(d =>
+                        getDependencySourceFieldId(d) === booleanFieldId &&
+                        d.includeWhen === includeWhen
+                    );
+                    if (existingDep) {
+                        fieldDependencies.value = fieldDependencies.value.filter(d => d.id !== existingDep.id);
+                    }
+                    fieldDependencies.value.push({
+                        id: generateId(fieldDependencies.value),
+                        fieldId: controlledFieldId,
+                        dependsOnFieldId: booleanFieldId,
+                        includeWhen
+                    });
+                    showBooleanControlPicker.value = false;
+                }
+
+                function removeBooleanControl(booleanFieldId, includeWhen) {
+                    fieldDependencies.value = fieldDependencies.value.filter(d =>
+                        !(getDependencySourceFieldId(d) === booleanFieldId && d.includeWhen === includeWhen)
+                    );
+                }
+
                 function slugify(text) {
                     return text.toLowerCase()
                         .replace(/ä/g, 'ae')
@@ -1730,7 +1871,7 @@
                 }
 
                 function fieldTypeIcon(type) {
-                    const icons = { text: 'fa-font', textarea: 'fa-align-left', number: 'fa-hashtag', select: 'fa-list' };
+                    const icons = { text: 'fa-font', textarea: 'fa-align-left', number: 'fa-hashtag', select: 'fa-list', boolean: 'fa-toggle-on' };
                     return 'fas ' + (icons[type] || 'fa-font');
                 }
 
@@ -1755,6 +1896,9 @@
                         ],
                         select: [
                             { key: 'multiple', label: 'Mehrfachauswahl', type: 'checkbox' }
+                        ],
+                        boolean: [
+                            { key: 'defaultValue', label: 'Standardwert (true)', type: 'checkbox' }
                         ]
                     };
                     return configs[type] || [];
@@ -1765,11 +1909,18 @@
                 }
 
                 function changeFieldType(field, newType) {
+                    const oldType = field.type;
                     field.type = newType;
                     if (!field.config) field.config = {};
-                    const defaults = { text: {}, textarea: {}, number: {}, select: { multiple: false } };
+                    const defaults = { text: {}, textarea: {}, number: {}, select: { multiple: false }, boolean: { defaultValue: false } };
                     const cfg = defaults[newType] || {};
                     field.config = { ...cfg };
+
+                    if (oldType === 'boolean' && newType !== 'boolean') {
+                        fieldDependencies.value = fieldDependencies.value.filter(d =>
+                            !(getDependencySourceFieldId(d) === field.id && d.includeWhen !== undefined)
+                        );
+                    }
                 }
 
                 function updateFieldConfig(field, key, value) {
@@ -2079,6 +2230,7 @@
                             if (f) {
                                 const oldNameId = f.translationId;
                                 const wasSelect = f.type === 'select';
+                                const wasBoolean = f.type === 'boolean';
                                 f.translationId = nameId;
                                 f.placeholderTranslationId = placeholderId || null;
                                 f.type = newFieldType.value;
@@ -2091,6 +2243,12 @@
                                     fieldOptions.value = fieldOptions.value.filter(o => o.fieldId !== f.id);
                                     optionDependencies.value = optionDependencies.value.filter(d =>
                                         !optIdSet.has(d.optionId) && !optIdSet.has(d.visibleOptionId)
+                                    );
+                                }
+
+                                if (wasBoolean && newFieldType.value !== 'boolean') {
+                                    fieldDependencies.value = fieldDependencies.value.filter(d =>
+                                        !(getDependencySourceFieldId(d) === f.id && d.includeWhen !== undefined)
                                     );
                                 }
 
@@ -2684,6 +2842,9 @@
                     openAddOption, openEditOption, closeOptionModal, selectOptionTrans, saveOption,
                     openAddDependency, addDependency, removeDependency,
                     openOptionFilterModal, toggleOptionDependency, removeOptionDepGroup,
+                    getBooleanControlledField, getAvailableBooleanControlFields,
+                    openBooleanControlPicker, setBooleanControl, removeBooleanControl,
+                    showBooleanControlPicker, booleanControlPickerFieldId, booleanControlPickerValue, booleanControlPickerSearch,
                     sortRootCategories, sortFields, sortOptions,
                     confirmDelete, executeDelete, executeLocalDelete,
                     newProject, triggerImport, handleFileImport, saveProject,
