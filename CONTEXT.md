@@ -73,8 +73,33 @@ Supported field types are currently:
 - `textarea`
 - `number`
 - `select`
+- `boolean`
 
 Field-specific config is defined in `getConfigFieldsForType(type)`.
+
+### boolean fields
+
+Boolean fields represent a true/false checkbox. Default value is `false`.
+
+Boolean fields can control the visibility of other fields in the same category via the "Steuerung" section in the expanded field panel:
+
+- **Bei true anzeigen**: Select a field to show when the boolean is checked (true).
+- **Bei false anzeigen**: Select a field to show when the boolean is unchecked (false, optional).
+
+This control is stored by extending `fieldDependencies` with an optional `includeWhen` property:
+
+```json
+{
+  "id": 1,
+  "fieldId": 2,
+  "dependsOnFieldId": 1,
+  "includeWhen": true
+}
+```
+
+Meaning: `fieldId` is shown when `dependsOnFieldId` (a boolean field) equals `includeWhen` (true or false).
+
+When `includeWhen` is absent, the dependency behaves as before (show when source is filled/selected). A field can have at most one dependency (enforced by `normalizeFieldDependencies`).
 
 ### fieldCategories
 
@@ -123,12 +148,27 @@ Meaning:
 - `dependsOnFieldId` is another field in the same category.
 - The dependent field is shown when the source field has been filled or selected by the end user.
 
+For boolean source fields, an optional `includeWhen` property extends the shape:
+
+```json
+{
+  "id": 1,
+  "fieldId": 2,
+  "dependsOnFieldId": 1,
+  "includeWhen": true
+}
+```
+
+- When `includeWhen` is present, the dependent field is shown when the boolean source field equals that value (`true` or `false`).
+- When `includeWhen` is absent, the dependency behaves as before (show when source is filled/selected).
+
 Rules:
 
 - A dependency is optional.
 - Each field can have at most one dependency.
 - Only other fields from the same selected category should be selectable as dependencies.
 - Self-dependencies and dependency cycles are not allowed.
+- Changing a boolean field to a non-boolean type removes its outgoing `includeWhen` dependencies.
 
 Legacy imports may contain older option-based entries like `{ optionId, childFieldId }`. `normalizeFieldDependencies()` maps those to the current field-based shape by resolving `optionId` to its parent field. Export should always write the canonical field-based shape.
 
@@ -176,7 +216,7 @@ The UI is German-language and organized as:
 
 - Left sidebar: category tree, project actions, language management.
 - Main area: selected category breadcrumb, category summary, field list.
-- Expanded field panel: field translations, placeholder translations, type/config, required toggle, field dependency, select options.
+- Expanded field panel: field translations, placeholder translations, type/config, required toggle, field dependency, boolean control (Steuerung), select options.
 - Select options: inline option editing plus option filtering.
 - Modals: category, field, option, dependency picker, option filter, delete confirmation, translation picker, language management, copy field.
 
@@ -186,6 +226,7 @@ SortableJS is used for category, field, and option ordering. Sortable instances 
 
 - Import/export is the only persistence mechanism.
 - Changing a select field to a non-select field removes its field options and option filters that reference those options.
+- Changing a boolean field to a non-boolean field removes its outgoing `includeWhen` dependencies.
 - The delete modal can offer two actions for categories and shared fields:
   - `Komplett löschen`: global delete. For categories, this removes descendants and all linked fields even if those fields are referenced elsewhere. For fields, this removes all `fieldCategories` links for that field, the field itself, its options, field dependencies where it is source or dependent target, option filters, and unused translations.
   - Local delete (`Nur Kategorie löschen` / `Nur aus Kategorie entfernen`): removes only links in the selected category or category tree. Shared referenced fields stay available in other categories. After local deletion, `normalizeFieldDependencies()` and `normalizeOptionDependencies()` remove dependencies/filters that are no longer valid for any remaining shared category.
@@ -202,6 +243,41 @@ SortableJS is used for category, field, and option ordering. Sortable instances 
 - If adding new persisted data, update both import and export paths.
 - If changing entity references, update delete previews, delete execution, translation cleanup, and import normalization as needed.
 - Be careful with shared fields: field-level changes affect every category that references the field.
+
+## Update System
+
+The project has a sidecar update mechanism using a Windows batch file. No update logic exists inside `index.html`.
+
+### Files
+
+- `version.txt` — Plain text file containing a single semver line (e.g. `1.0.0`). Placed alongside `index.html`.
+- `update.bat` — Windows batch file that the user runs manually when they want to check for and apply updates.
+
+### How update.bat works
+
+1. Reads the local `version.txt` next to the batch file.
+2. Fetches `https://raw.githubusercontent.com/manfredzimmer/Kirsch-Scheme-Builder/main/version.txt` via PowerShell `Invoke-WebRequest`.
+3. Compares remote version string to local version string.
+4. If they match, prints "already up to date" and exits.
+5. If they differ (or no local version.txt exists), downloads `index.html` and `version.txt` from the `main` branch.
+6. Replaces the local files with the downloaded ones.
+7. Cleans up temporary files.
+8. Launches the updated `index.html` via `start ""`.
+
+### Release Workflow
+
+1. Make changes to `index.html`.
+2. Update `version.txt` with the new version number.
+3. Commit both to `main` branch.
+4. No release assets are needed — `update.bat` downloads raw files from `main`.
+5. Users run `update.bat` to get the new version.
+
+### Important
+
+- `update.bat` must stay in the same directory as `index.html`.
+- PowerShell is required (available on Windows 7+).
+- No changes to `index.html` are needed for the update system.
+- The `main` branch should always contain the latest release-ready code.
 
 ## Basic Verification
 
