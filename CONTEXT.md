@@ -25,6 +25,7 @@ The app stores all data in Vue refs while the page is open. Projects are importe
 
 `saveProject()` writes a ZIP with these files:
 
+- `project.json` — stores the project name (`{ name: "..." }`)
 - `categories.json`
 - `fields.json`
 - `fieldCategories.json`
@@ -34,7 +35,7 @@ The app stores all data in Vue refs while the page is open. Projects are importe
 - `fieldOptionDependencies.json`
 - `translations.json`
 
-`handleFileImport()` reads the same files. Missing files default to empty arrays.
+`handleFileImport()` reads the same files. Missing files default to empty arrays, except `project.json` which defaults to `null` (falls back to ZIP file name).
 
 ## Data Model
 
@@ -75,6 +76,8 @@ Supported field types are currently:
 - `number`
 - `select`
 - `boolean`
+- `date` — with config: `allowFuture` (checkbox), `minDateText` (pattern text), `maxDateText` (pattern text), `showDay`/`showMonth`/`showYear` (checkboxes). Min/max date text supports patterns: `today`, `-d N`, `-m N`, `-y N`, `+d N`, `+m N`, `+y N` (e.g. `-y 100, -d30`).
+- `datetime` — same as date plus `minDateTimeText`/`maxDateTimeText` with additional patterns `-hh N`, `-mm N`, `-ss N`, `+hh N`, `+mm N`, `+ss N`, and `showHour`/`showMinute`/`showSecond` checkboxes.
 
 Field-specific config is defined in `getConfigFieldsForType(type)`.
 

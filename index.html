@@ -263,7 +263,17 @@
         <div v-else class="flex flex-col min-h-screen">
             <!-- Header -->
             <header class="bg-[#242118] border-b border-[#3d3528] px-6 py-4 flex items-center justify-between shrink-0">
-                <h1 class="font-display text-2xl text-amber-50">{{ projectName }}</h1>
+                <div class="flex items-center gap-2">
+                    <template v-if="editingProjectName">
+                        <input v-model="projectName" ref="projectNameInput" @keyup.enter="editingProjectName = false" @blur="editingProjectName = false" class="input-field px-3 py-1 rounded-lg text-lg font-display text-amber-50 max-w-xs" autofocus>
+                    </template>
+                    <template v-else>
+                        <h1 class="font-display text-2xl text-amber-50">{{ projectName }}</h1>
+                    </template>
+                    <button @click="startEditProjectName" class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-sm">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                </div>
                 <div class="flex gap-3">
                     <button @click="showLanguageModal = true" class="btn-ghost px-4 py-2 rounded-lg">
                         <i class="fas fa-language mr-2"></i>Sprachen
@@ -505,7 +515,7 @@
                                         <!-- Type (editable) -->
                                         <div>
                                             <label class="block text-xs text-[#a89f94] mb-1.5">Typ</label>
-                                            <div class="flex rounded-xl overflow-hidden border border-[#3d3528] w-fit">
+                                            <div class="flex flex-wrap rounded-xl border border-[#3d3528] w-fit">
                                                 <button v-for="t in fieldTypes" :key="t"
                                                     @click="changeFieldType(field, t)"
                                                     :class="['px-4 py-1.5 text-xs transition', field.type === t ? 'btn-primary' : 'toggle-btn']">
@@ -519,7 +529,7 @@
                                             <label class="block text-xs text-[#a89f94] mb-1.5">Konfiguration</label>
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div v-for="cfg in fieldConfigFields(field)" :key="cfg.key" class="flex items-center gap-2">
-                                                    <span class="text-xs text-[#6b635a] w-20">{{ cfg.label }}</span>
+                                                    <span class="text-xs text-[#6b635a] w-30">{{ cfg.label }}</span>
                                                     <input v-if="cfg.type === 'number'"
                                                         :value="field.config?.[cfg.key] ?? ''"
                                                         @input="updateFieldConfig(field, cfg.key, Number($event.target.value) || '')"
@@ -843,7 +853,7 @@
                     <!-- Type -->
                     <div>
                         <label class="block text-sm text-[#a89f94] mb-2">Typ</label>
-                        <div class="flex rounded-xl overflow-hidden border border-[#3d3528] w-fit">
+                        <div class="flex flex-wrap rounded-xl border border-[#3d3528] w-fit">
                             <button v-for="t in fieldTypes" :key="t"
                                 @click="newFieldType = t"
                                 :class="['px-5 py-2.5 text-sm transition', newFieldType === t ? 'btn-primary' : 'toggle-btn']">
@@ -1279,6 +1289,8 @@
                 // ─── STATE ───
                 const hasProject = ref(false);
                 const projectName = ref('');
+                const editingProjectName = ref(false);
+                const projectNameInput = ref(null);
                 const categories = ref([]);
                 const fields = ref([]);
                 const fieldCategories = ref([]);
@@ -1296,7 +1308,7 @@
                 const fileInput = ref(null);
                 const treeContainer = ref(null);
 
-                const fieldTypes = ['text', 'textarea', 'number', 'select', 'boolean'];
+                const fieldTypes = ['text', 'textarea', 'number', 'select', 'boolean', 'date', 'datetime'];
 
                 // ─── CATEGORY MODAL STATE ───
                 const showCategoryModal = ref(false);
@@ -1654,6 +1666,17 @@
 
                 const newFieldConfigFields = computed(() => {
                     return getConfigFieldsForType(newFieldType.value);
+                });
+
+                // Initialize new field config defaults when type changes in modal
+                watch(newFieldType, (type) => {
+                    const defaults = { date: { allowFuture: false, showDay: true, showMonth: true, showYear: true }, datetime: { allowFuture: false, showDay: true, showMonth: true, showYear: true, showHour: true, showMinute: true, showSecond: true } };
+                    const typeDefaults = defaults[type];
+                    if (typeDefaults) {
+                        newFieldConfig.value = { ...typeDefaults };
+                    } else {
+                        newFieldConfig.value = {};
+                    }
                 });
 
                 const filteredLanguages = computed(() => {
@@ -2045,7 +2068,7 @@
                 }
 
                 function fieldTypeIcon(type) {
-                    const icons = { text: 'fa-font', textarea: 'fa-align-left', number: 'fa-hashtag', select: 'fa-list', boolean: 'fa-toggle-on' };
+                    const icons = { text: 'fa-font', textarea: 'fa-align-left', number: 'fa-hashtag', select: 'fa-list', boolean: 'fa-toggle-on', date: 'fa-calendar', datetime: 'fa-calendar-plus' };
                     return 'fas ' + (icons[type] || 'fa-font');
                 }
 
@@ -2073,6 +2096,25 @@
                         ],
                         boolean: [
                             { key: 'defaultValue', label: 'Standardwert (true)', type: 'checkbox' }
+                        ],
+                        date: [
+                            { key: 'allowFuture', label: 'Zukünftiges Datum erlauben?', type: 'checkbox' },
+                            { key: 'minDateText', label: 'Min Datum-Text (d, m, y)', type: 'text' },
+                            { key: 'maxDateText', label: 'Max Datum-Text (d, m, y)', type: 'text' },
+                            { key: 'showDay', label: 'Tag anzeigen', type: 'checkbox' },
+                            { key: 'showMonth', label: 'Monat anzeigen', type: 'checkbox' },
+                            { key: 'showYear', label: 'Jahr anzeigen', type: 'checkbox' }
+                        ],
+                        datetime: [
+                            { key: 'allowFuture', label: 'Zukünftiges Datum/Zeit erlauben?', type: 'checkbox' },
+                            { key: 'minDateTimeText', label: 'Min Datum/Zeit-Text', type: 'text' },
+                            { key: 'maxDateTimeText', label: 'Max Datum/Zeit-Text', type: 'text' },
+                            { key: 'showDay', label: 'Tag anzeigen', type: 'checkbox' },
+                            { key: 'showMonth', label: 'Monat anzeigen', type: 'checkbox' },
+                            { key: 'showYear', label: 'Jahr anzeigen', type: 'checkbox' },
+                            { key: 'showHour', label: 'Stunde anzeigen', type: 'checkbox' },
+                            { key: 'showMinute', label: 'Minute anzeigen', type: 'checkbox' },
+                            { key: 'showSecond', label: 'Sekunde anzeigen', type: 'checkbox' }
                         ]
                     };
                     return configs[type] || [];
@@ -2086,7 +2128,7 @@
                     const oldType = field.type;
                     field.type = newType;
                     if (!field.config) field.config = {};
-                    const defaults = { text: {}, textarea: {}, number: {}, select: { multiple: false }, boolean: { defaultValue: false } };
+                    const defaults = { text: {}, textarea: {}, number: {}, select: { multiple: false }, boolean: { defaultValue: false }, date: { allowFuture: false, showDay: true, showMonth: true, showYear: true }, datetime: { allowFuture: false, showDay: true, showMonth: true, showYear: true, showHour: true, showMinute: true, showSecond: true } };
                     const cfg = defaults[newType] || {};
                     field.config = { ...cfg };
 
@@ -2121,6 +2163,13 @@
                 }
 
                 // ─── PROJECT ───
+                function startEditProjectName() {
+                    editingProjectName.value = true;
+                    nextTick(() => {
+                        if (projectNameInput.value) projectNameInput.value.focus();
+                    });
+                }
+
                 function newProject() {
                     const name = prompt('Projektname:');
                     if (!name) return;
@@ -2150,14 +2199,14 @@
                     reader.onload = async (event) => {
                         try {
                             const zip = await JSZip.loadAsync(event.target.result);
-                            const files = ['categories.json', 'fields.json', 'fieldCategories.json', 'fieldOptions.json', 'fieldDependencies.json', 'optionDependencies.json', 'fieldOptionDependencies.json', 'translations.json'];
+                            const files = ['project.json', 'categories.json', 'fields.json', 'fieldCategories.json', 'fieldOptions.json', 'fieldDependencies.json', 'optionDependencies.json', 'fieldOptionDependencies.json', 'translations.json'];
                             const data = {};
                             for (const name of files) {
                                 const f = zip.file(name);
                                 if (f) {
                                     data[name] = JSON.parse(await f.async('text'));
                                 } else {
-                                    data[name] = [];
+                                    data[name] = name === 'project.json' ? null : [];
                                 }
                             }
                             categories.value = data['categories.json'];
@@ -2175,7 +2224,11 @@
                             });
                             languages.value = langs.size > 0 ? Array.from(langs).sort() : ['de', 'en'];
 
-                            projectName.value = file.name.replace('.zip', '');
+                            if (data['project.json'] && data['project.json'].name) {
+                                projectName.value = data['project.json'].name;
+                            } else {
+                                projectName.value = file.name.replace('.zip', '');
+                            }
                             selectedCategoryId.value = null;
                             expandedCategoryIds.value = new Set();
                             hasProject.value = true;
@@ -2193,6 +2246,7 @@
                     optionDependencies.value = normalizeOptionDependencies();
                     fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                     const zip = new JSZip();
+                    zip.file('project.json', JSON.stringify({ name: projectName.value }, null, 2));
                     zip.file('categories.json', JSON.stringify(categories.value, null, 2));
                     zip.file('fields.json', JSON.stringify(fields.value, null, 2));
                     zip.file('fieldCategories.json', JSON.stringify(fieldCategories.value, null, 2));
@@ -3013,7 +3067,7 @@
                 });
 
                 return {
-                    hasProject, projectName, categories, fields, fieldCategories, fieldOptions, fieldDependencies, optionDependencies, fieldOptionDependencies, translations, languages,
+                    hasProject, projectName, editingProjectName, projectNameInput, categories, fields, fieldCategories, fieldOptions, fieldDependencies, optionDependencies, fieldOptionDependencies, translations, languages,
                     selectedCategoryId, expandedCategoryIds, expandedFieldIds, searchQuery, fileInput, treeContainer, fieldTypes,
                     selectedCategory, selectedCategoryName, currentBreadcrumbs, currentFields, flatTree,
                     filteredCatTranslations, filteredCatParents, filteredFieldNameTrans, filteredFieldPlaceholderTrans,
@@ -3052,7 +3106,7 @@
                     showBooleanControlPicker, booleanControlPickerFieldId, booleanControlPickerValue, booleanControlPickerSearch,
                     sortRootCategories, sortFields, sortOptions,
                     confirmDelete, executeDelete, executeLocalDelete,
-                    newProject, triggerImport, handleFileImport, saveProject,
+                    startEditProjectName, newProject, triggerImport, handleFileImport, saveProject,
                     addLanguage, confirmRemoveLanguage, executeRemoveLanguage, getLanguageName,
                     ISO_LANGUAGES
                 };

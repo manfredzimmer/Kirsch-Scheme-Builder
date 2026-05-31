@@ -8,8 +8,8 @@ The app is currently a single-file static application in `index.html`. It runs d
 
 - Category tree editor with parent-child categories, ordering, levels, and optional metadata.
 - Dynamic fields per category.
-- Supported field types: `text`, `textarea`, `number`, `select`, and `boolean`.
-- Field configuration per type, for example min/max values, text length limits, patterns, textarea rows, units, and multi-select.
+- Supported field types: `text`, `textarea`, `number`, `select`, `boolean`, `date`, and `datetime`.
+- Field configuration per type, for example min/max values, text length limits, patterns, textarea rows, units, multi-select, date/time patterns, and visibility toggles for date segments.
 - Required/optional field handling.
 - Localized field labels, placeholders, category names, and option labels.
 - Language management with missing-translation warnings.
@@ -19,6 +19,7 @@ The app is currently a single-file static application in `index.html`. It runs d
 - Option filters: restrict options in one select field based on a selected option in another select field.
 - Field option dependencies: show a field when specific select options are chosen (configurable via searchable multi-select modal).
 - Drag-and-drop sorting for categories, fields, and options.
+- Editable project name with inline rename.
 - Field copy workflows:
   - Reference copy, where one field definition is reused in another category.
   - Deep copy, where a new field is created with copied options.
@@ -46,6 +47,7 @@ The application depends on CDN-hosted browser libraries:
 Exporting a project creates a ZIP file with these JSON files:
 
 ```text
+project.json
 categories.json
 fields.json
 fieldCategories.json
@@ -57,6 +59,16 @@ translations.json
 ```
 
 ## JSON Files
+
+### project.json
+
+Stores the project name.
+
+```json
+{
+  "name": "My Project"
+}
+```
 
 ### categories.json
 
@@ -130,10 +142,26 @@ Fields:
 
 - `id`: Numeric field id.
 - `translationId`: Label translation id.
-- `type`: One of `text`, `textarea`, `number`, or `select`.
+- `type`: One of `text`, `textarea`, `number`, `select`, `boolean`, `date`, or `datetime`.
 - `placeholderTranslationId`: Placeholder translation id, or `null`.
 - `required`: Whether the field is required.
 - `config`: Type-specific configuration object.
+
+  **`date` config:**
+  - `allowFuture` (boolean): Allow future dates.
+  - `minDateText` (string): Pattern-based minimum date constraint. Supports: `today`, `-d N`, `-m N`, `-y N`, `+d N`, `+m N`, `+y N`. Patterns can be combined (e.g. `-y 100, -d30`).
+  - `maxDateText` (string): Same pattern logic for maximum date.
+  - `showDay` (boolean): Show day picker.
+  - `showMonth` (boolean): Show month picker.
+  - `showYear` (boolean): Show year picker.
+
+  **`datetime` config:**
+  - Same as `date` plus:
+  - `minDateTimeText` (string): Same as `minDateText` with additional patterns `-hh N`, `-mm N`, `-ss N`, `+hh N`, `+mm N`, `+ss N`.
+  - `maxDateTimeText` (string): Same pattern logic for maximum date-time.
+  - `showHour` (boolean): Show hour picker.
+  - `showMinute` (boolean): Show minute picker.
+  - `showSecond` (boolean): Show second picker.
 
 ### fieldCategories.json
 
@@ -318,7 +346,7 @@ type Category = {
   metadata?: Record<string, unknown> | null;
 };
 
-type FieldType = "text" | "textarea" | "number" | "select" | "boolean";
+type FieldType = "text" | "textarea" | "number" | "select" | "boolean" | "date" | "datetime";
 
 type Field = {
   id: number;
