@@ -31,6 +31,7 @@ The app stores all data in Vue refs while the page is open. Projects are importe
 - `fieldOptions.json`
 - `fieldDependencies.json`
 - `optionDependencies.json`
+- `fieldOptionDependencies.json`
 - `translations.json`
 
 `handleFileImport()` reads the same files. Missing files default to empty arrays.
@@ -191,6 +192,34 @@ Meaning:
 - When trigger option `optionId` is selected, `visibleOptionId` is allowed/visible in another select field.
 
 Do not confuse this with `fieldDependencies`; option filters restrict options, while field dependencies control whether a whole field is shown.
+
+### fieldOptionDependencies
+
+Field-level option dependencies control whether a field is shown when specific select options are chosen by the end user. This is separate from `fieldDependencies` (field-to-field visibility) and `optionDependencies` (option-to-option filtering).
+
+Shape:
+
+```json
+{
+  "id": 1,
+  "fieldId": 5,
+  "optionId": 20
+}
+```
+
+Meaning:
+
+- `fieldId` is the dependent field that should be hidden initially.
+- `optionId` is a field option (belonging to a select field in the same category).
+- The dependent field is shown when at least one of its configured options is selected by the end user (OR logic).
+
+Rules:
+
+- A field can have multiple `fieldOptionDependencies` entries (OR logic across them).
+- Options are displayed grouped by their parent select field in the picker modal.
+- Only options from select fields in the same category are available.
+- This is combined with `fieldDependencies` using AND logic: if both a field dependency and field option dependencies exist, the field is shown only when **both** conditions are met.
+- `normalizeFieldOptionDependencies()` removes stale entries (deleted options, deleted fields, duplicates).
 
 ### translations
 

@@ -442,6 +442,10 @@
                                             class="fas fa-toggle-on text-[#d4a853] text-[10px] ml-0.5"
                                             :title="'Von Boolean gesteuert: ' + (getVisibleFieldDependency(field.id).includeWhen ? 'true' : 'false')">
                                         </i>
+                                        <i v-if="getFieldOptionDeps(field.id).length > 0"
+                                            class="fas fa-check-circle text-[#d4a853] text-[10px] ml-0.5"
+                                            title="Options-Abhängigkeit: wird bei bestimmten Optionen angezeigt">
+                                        </i>
                                         <button @click.stop="openCopyModal(field)"
                                             class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-xs">
                                             <i class="fas fa-copy"></i>
@@ -568,6 +572,29 @@
                                                 <button @click="openAddDependency(field)"
                                                     class="text-xs text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
                                                     <i class="fas fa-plus-circle mr-1"></i>{{ getVisibleFieldDependency(field.id) ? 'Ändern' : 'Abhängigkeit' }}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Field option dependency -->
+                                        <div class="bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-2">
+                                            <div class="flex items-center justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <label class="block text-xs text-[#a89f94] mb-1">Options-Abhängigkeit</label>
+                                                    <div v-if="getFieldOptionDeps(field.id).length > 0"
+                                                        class="flex items-center gap-2 text-xs text-[#a89f94]">
+                                                        <i class="fas fa-arrow-right text-[#6b635a]"></i>
+                                                        <span>Wird angezeigt, wenn eine dieser Optionen gewählt ist: <strong class="text-amber-50">{{ getFieldOptionDepSummary(field.id).join(', ') }}</strong></span>
+                                                        <button @click="removeFieldOptionDeps(field.id)"
+                                                            class="text-[#c44536] hover:text-[#d9584a] ml-1">
+                                                            <i class="fas fa-times-circle"></i>
+                                                        </button>
+                                                    </div>
+                                                    <div v-else class="text-xs text-[#6b635a]">Keine Options-Abhängigkeit</div>
+                                                </div>
+                                                <button @click="openFieldOptionDepModal(field)"
+                                                    class="text-xs text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
+                                                    <i class="fas fa-plus-circle mr-1"></i>{{ getFieldOptionDeps(field.id).length > 0 ? 'Ändern' : 'Optionen' }}
                                                 </button>
                                             </div>
                                         </div>
@@ -1040,6 +1067,47 @@
             </div>
         </div>
 
+        <!-- Field Option Dependency Modal -->
+        <div v-if="showFieldOptionDepModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between">
+                    <h2 class="modal-title text-2xl">Options-Abhängigkeit</h2>
+                    <button @click="closeFieldOptionDepModal" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5">
+                    <p class="text-xs text-[#a89f94] mb-4">Zeige <strong class="text-amber-50">{{ fieldOptionDepFieldLabel }}</strong> wenn eine dieser Optionen gewählt ist:</p>
+                    <div class="relative mb-4">
+                        <input v-model="fieldOptionDepSearch" type="text" placeholder="Option suchen..."
+                            class="input-field w-full px-4 py-2 rounded-lg text-sm">
+                    </div>
+                    <div v-if="fieldOptionDepGroupedOptions.length === 0" class="text-center text-[#6b635a] py-8 text-sm">
+                        Keine Select-Felder mit Optionen in dieser Kategorie
+                    </div>
+                    <div v-for="group in fieldOptionDepGroupedOptions" :key="'g-' + group.fieldId"
+                        class="mb-4 bg-[#242118] border border-[#3d3528] rounded-lg overflow-hidden">
+                        <div class="px-4 py-2 border-b border-[#3d3528] text-xs text-[#a89f94] font-medium">
+                            {{ group.fieldName }}
+                        </div>
+                        <div class="p-2 space-y-0.5">
+                            <div v-for="opt in group.options" :key="'fo-' + opt.id"
+                                @click="toggleFieldOptionDep(opt.id)"
+                                class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-[#2e2820] transition">
+                                <input :checked="opt.checked" type="checkbox"
+                                    class="accent-[#d4a853] pointer-events-none">
+                                <span class="text-sm text-amber-50">{{ opt.label }}</span>
+                                <span class="text-[10px] text-[#6b635a] font-mono">({{ opt.value }})</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end">
+                    <button @click="closeFieldOptionDepModal" class="btn-primary px-5 py-2.5 rounded-lg">Fertig</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Delete Confirmation Modal -->
         <div v-if="showDeleteModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
             <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
@@ -1217,6 +1285,7 @@
                 const fieldOptions = ref([]);
                 const fieldDependencies = ref([]);
                 const optionDependencies = ref([]);
+                const fieldOptionDependencies = ref([]);
                 const translations = ref([]);
                 const languages = ref(['de', 'en']);
 
@@ -1359,6 +1428,76 @@
 
                     showCopyModal.value = false;
                     copySourceField.value = null;
+                }
+
+                // ─── FIELD OPTION DEPENDENCY PICKER STATE ───
+                const showFieldOptionDepModal = ref(false);
+                const fieldOptionDepFieldId = ref(null);
+                const fieldOptionDepFieldLabel = ref('');
+                const fieldOptionDepSearch = ref('');
+
+                const fieldOptionDepGroupedOptions = computed(() => {
+                    if (!fieldOptionDepFieldId.value || !selectedCategoryId.value) return [];
+                    const catFieldIds = new Set(getFieldIdsForCategory(selectedCategoryId.value));
+                    const selectFields = fields.value.filter(f => catFieldIds.has(f.id) && f.type === 'select' && f.id !== fieldOptionDepFieldId.value);
+                    const result = [];
+                    for (const field of selectFields) {
+                        const options = getFieldOptionsList(field.id);
+                        const items = options.map(o => ({
+                            id: o.id,
+                            label: getTranslationText(o.labelTranslationId),
+                            value: o.value,
+                            checked: fieldOptionDependencies.value.some(d =>
+                                d.fieldId === fieldOptionDepFieldId.value && d.optionId === o.id
+                            )
+                        }));
+                        result.push({
+                            fieldId: field.id,
+                            fieldName: getTranslationText(field.translationId),
+                            options: items
+                        });
+                    }
+                    if (fieldOptionDepSearch.value) {
+                        const q = fieldOptionDepSearch.value.toLowerCase();
+                        return result.map(g => ({
+                            ...g,
+                            options: g.options.filter(o => o.label.toLowerCase().includes(q))
+                        })).filter(g => g.options.length > 0);
+                    }
+                    return result;
+                });
+
+                function openFieldOptionDepModal(field) {
+                    fieldOptionDepFieldId.value = field.id;
+                    fieldOptionDepFieldLabel.value = getTranslationText(field.translationId);
+                    fieldOptionDepSearch.value = '';
+                    showFieldOptionDepModal.value = true;
+                }
+
+                function closeFieldOptionDepModal() {
+                    showFieldOptionDepModal.value = false;
+                    fieldOptionDepFieldId.value = null;
+                }
+
+                function toggleFieldOptionDep(optionId) {
+                    const fieldId = fieldOptionDepFieldId.value;
+                    if (!fieldId) return;
+                    const existing = fieldOptionDependencies.value.find(d =>
+                        d.fieldId === fieldId && d.optionId === optionId
+                    );
+                    if (existing) {
+                        fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d => d.id !== existing.id);
+                        return;
+                    }
+                    fieldOptionDependencies.value.push({
+                        id: generateId(fieldOptionDependencies.value),
+                        fieldId,
+                        optionId
+                    });
+                }
+
+                function removeFieldOptionDeps(fieldId) {
+                    fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d => d.fieldId !== fieldId);
                 }
 
                 // ─── DEPENDENCY PICKER STATE ───
@@ -1693,6 +1832,41 @@
                     return normalized;
                 }
 
+                function normalizeFieldOptionDependencies(rawDeps = fieldOptionDependencies.value) {
+                    const normalized = [];
+                    const usedPairs = new Set();
+
+                    for (const dep of rawDeps || []) {
+                        if (!dep.fieldId || !dep.optionId) continue;
+                        if (!fields.value.some(f => f.id === dep.fieldId)) continue;
+                        if (!fieldOptions.value.some(o => o.id === dep.optionId)) continue;
+
+                        const pairKey = dep.fieldId + ':' + dep.optionId;
+                        if (usedPairs.has(pairKey)) continue;
+                        usedPairs.add(pairKey);
+
+                        const id = dep.id && !normalized.some(d => d.id === dep.id)
+                            ? dep.id
+                            : generateId(normalized);
+                        normalized.push({ id, fieldId: dep.fieldId, optionId: dep.optionId });
+                    }
+
+                    return normalized;
+                }
+
+                function getFieldOptionDeps(fieldId) {
+                    return fieldOptionDependencies.value.filter(d => d.fieldId === fieldId);
+                }
+
+                function getFieldOptionDepSummary(fieldId) {
+                    const deps = getFieldOptionDeps(fieldId);
+                    if (deps.length === 0) return null;
+                    return deps.map(d => {
+                        const opt = fieldOptions.value.find(o => o.id === d.optionId);
+                        return opt ? getTranslationText(opt.labelTranslationId) : '?';
+                    });
+                }
+
                 function normalizeOptionDependencies(rawDeps = optionDependencies.value) {
                     const normalized = [];
                     const usedPairs = new Set();
@@ -1957,6 +2131,7 @@
                     fieldOptions.value = [];
                     fieldDependencies.value = [];
                     optionDependencies.value = [];
+                    fieldOptionDependencies.value = [];
                     translations.value = [];
                     languages.value = ['de', 'en'];
                     selectedCategoryId.value = null;
@@ -1975,7 +2150,7 @@
                     reader.onload = async (event) => {
                         try {
                             const zip = await JSZip.loadAsync(event.target.result);
-                            const files = ['categories.json', 'fields.json', 'fieldCategories.json', 'fieldOptions.json', 'fieldDependencies.json', 'optionDependencies.json', 'translations.json'];
+                            const files = ['categories.json', 'fields.json', 'fieldCategories.json', 'fieldOptions.json', 'fieldDependencies.json', 'optionDependencies.json', 'fieldOptionDependencies.json', 'translations.json'];
                             const data = {};
                             for (const name of files) {
                                 const f = zip.file(name);
@@ -1991,6 +2166,7 @@
                             fieldOptions.value = data['fieldOptions.json'];
                             fieldDependencies.value = normalizeFieldDependencies(data['fieldDependencies.json']);
                             optionDependencies.value = normalizeOptionDependencies(data['optionDependencies.json']);
+                            fieldOptionDependencies.value = normalizeFieldOptionDependencies(data['fieldOptionDependencies.json']);
                             translations.value = data['translations.json'];
 
                             const langs = new Set();
@@ -2015,6 +2191,7 @@
                     computeAllLevels();
                     fieldDependencies.value = normalizeFieldDependencies();
                     optionDependencies.value = normalizeOptionDependencies();
+                    fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                     const zip = new JSZip();
                     zip.file('categories.json', JSON.stringify(categories.value, null, 2));
                     zip.file('fields.json', JSON.stringify(fields.value, null, 2));
@@ -2022,6 +2199,7 @@
                     zip.file('fieldOptions.json', JSON.stringify(fieldOptions.value, null, 2));
                     zip.file('fieldDependencies.json', JSON.stringify(fieldDependencies.value, null, 2));
                     zip.file('optionDependencies.json', JSON.stringify(optionDependencies.value, null, 2));
+                    zip.file('fieldOptionDependencies.json', JSON.stringify(fieldOptionDependencies.value, null, 2));
                     zip.file('translations.json', JSON.stringify(translations.value, null, 2));
 
                     const blob = await zip.generateAsync({ type: 'blob' });
@@ -2243,6 +2421,9 @@
                                     fieldOptions.value = fieldOptions.value.filter(o => o.fieldId !== f.id);
                                     optionDependencies.value = optionDependencies.value.filter(d =>
                                         !optIdSet.has(d.optionId) && !optIdSet.has(d.visibleOptionId)
+                                    );
+                                    fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d =>
+                                        !optIdSet.has(d.optionId)
                                     );
                                 }
 
@@ -2496,6 +2677,9 @@
                         const catOptionDeps = optionDependencies.value.filter(d =>
                             catOptionIds.has(d.optionId) || catOptionIds.has(d.visibleOptionId)
                         );
+                        const catFieldOptDeps = fieldOptionDependencies.value.filter(d =>
+                            catFieldIds.has(d.fieldId) || catOptionIds.has(d.optionId)
+                        );
 
                         preview.push({ id: 'cat-' + item.id, depth: 0, label: getTranslationText(item.translationId) + ' (Kategorie)', icon: 'fas fa-folder' });
                         descendants.forEach(d => preview.push({ id: 'dsc-' + d.id, depth: 1, label: getTranslationText(d.translationId), icon: 'fas fa-folder-open' }));
@@ -2503,6 +2687,7 @@
                         catOptions.forEach(o => preview.push({ id: 'opt-' + o.id, depth: 3, label: getTranslationText(o.labelTranslationId), icon: 'fas fa-circle' }));
                         catDeps.forEach(d => preview.push({ id: 'dep-' + d.id, depth: 4, label: 'Feld-Abhängigkeit', icon: 'fas fa-link' }));
                         catOptionDeps.forEach(d => preview.push({ id: 'optdep-' + d.id, depth: 4, label: 'Optionen-Filter', icon: 'fas fa-filter' }));
+                        catFieldOptDeps.forEach(d => preview.push({ id: 'fod-' + d.id, depth: 4, label: 'Options-Abhängigkeit', icon: 'fas fa-check-circle' }));
 
                         const usedTransIds = new Set();
                         categories.value.forEach(c => { if (!deleteCatIds.has(c.id)) usedTransIds.add(c.translationId); });
@@ -2539,6 +2724,10 @@
                                 !localOptionIdsToDelete.has(d.optionId) && !localOptionIdsToDelete.has(d.visibleOptionId)
                             );
                             optionDependencies.value = normalizeOptionDependencies();
+                            fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d =>
+                                !localFieldIdsToDelete.has(d.fieldId) && !localOptionIdsToDelete.has(d.optionId)
+                            );
+                            fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                             cleanupOrphanedTranslations();
                             if (selectedCategoryId.value && deleteCatIds.has(selectedCategoryId.value)) {
                                 selectedCategoryId.value = null;
@@ -2557,6 +2746,10 @@
                             optionDependencies.value = optionDependencies.value.filter(d => !catOptionIds.has(d.optionId) && !catOptionIds.has(d.visibleOptionId));
                             translations.value = translations.value.filter(t => usedTransIds.has(t.id));
                             optionDependencies.value = normalizeOptionDependencies();
+                            fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d =>
+                                !catFieldIds.has(d.fieldId) && !catOptionIds.has(d.optionId)
+                            );
+                            fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                             if (selectedCategoryId.value && deleteCatIds.has(selectedCategoryId.value)) {
                                 selectedCategoryId.value = null;
                             }
@@ -2570,6 +2763,7 @@
                             getDependencyChildFieldId(d) === item.id || getDependencySourceFieldId(d) === item.id
                         );
                         const fOptDeps = optionDependencies.value.filter(d => fOptIds.has(d.optionId) || fOptIds.has(d.visibleOptionId));
+                        const fFieldOptDeps = fieldOptionDependencies.value.filter(d => d.fieldId === item.id || fOptIds.has(d.optionId));
 
                         if (isShared) {
                             const catNames = catIds.map(cid => {
@@ -2583,6 +2777,7 @@
                         fOpts.forEach(o => preview.push({ id: 'opt-' + o.id, depth: 1, label: getTranslationText(o.labelTranslationId), icon: 'fas fa-circle' }));
                         fDeps.forEach(d => preview.push({ id: 'dep-' + d.id, depth: 1, label: 'Feld-Abhängigkeit', icon: 'fas fa-link' }));
                         fOptDeps.forEach(d => preview.push({ id: 'optdep-' + d.id, depth: 1, label: 'Optionen-Filter', icon: 'fas fa-filter' }));
+                        fFieldOptDeps.forEach(d => preview.push({ id: 'fod-' + d.id, depth: 1, label: 'Options-Abhängigkeit', icon: 'fas fa-check-circle' }));
 
                         deletePrimaryLabel.value = isShared ? 'Komplett löschen' : 'Löschen';
                         if (isShared && selectedCategoryId.value && catIds.includes(selectedCategoryId.value)) {
@@ -2594,6 +2789,7 @@
                                 );
                                 fieldDependencies.value = normalizeFieldDependencies();
                                 optionDependencies.value = normalizeOptionDependencies();
+                                fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                                 cleanupOrphanedTranslations();
                             };
                         }
@@ -2608,17 +2804,23 @@
                             fieldDependencies.value = normalizeFieldDependencies();
                             optionDependencies.value = optionDependencies.value.filter(d => !fOptIds.has(d.optionId) && !fOptIds.has(d.visibleOptionId));
                             optionDependencies.value = normalizeOptionDependencies();
+                            fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d => d.fieldId !== item.id && !fOptIds.has(d.optionId));
+                            fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                             cleanupOrphanedTranslations();
                         };
                     } else if (type === 'option') {
                         const oOptDeps = optionDependencies.value.filter(d => d.optionId === item.id || d.visibleOptionId === item.id);
+                        const oFieldOptDeps = fieldOptionDependencies.value.filter(d => d.optionId === item.id);
                         preview.push({ id: 'opt-' + item.id, depth: 0, label: getTranslationText(item.labelTranslationId), icon: 'fas fa-circle' });
                         oOptDeps.forEach(d => preview.push({ id: 'optdep-' + d.id, depth: 1, label: 'Optionen-Filter', icon: 'fas fa-filter' }));
+                        oFieldOptDeps.forEach(d => preview.push({ id: 'fod-' + d.id, depth: 1, label: 'Options-Abhängigkeit', icon: 'fas fa-check-circle' }));
 
                         deleteAction.value = () => {
                             fieldOptions.value = fieldOptions.value.filter(o => o.id !== item.id);
                             optionDependencies.value = optionDependencies.value.filter(d => d.optionId !== item.id && d.visibleOptionId !== item.id);
                             optionDependencies.value = normalizeOptionDependencies();
+                            fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d => d.optionId !== item.id);
+                            fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                             cleanupOrphanedTranslations();
                         };
                     }
@@ -2811,7 +3013,7 @@
                 });
 
                 return {
-                    hasProject, projectName, categories, fields, fieldCategories, fieldOptions, fieldDependencies, optionDependencies, translations, languages,
+                    hasProject, projectName, categories, fields, fieldCategories, fieldOptions, fieldDependencies, optionDependencies, fieldOptionDependencies, translations, languages,
                     selectedCategoryId, expandedCategoryIds, expandedFieldIds, searchQuery, fileInput, treeContainer, fieldTypes,
                     selectedCategory, selectedCategoryName, currentBreadcrumbs, currentFields, flatTree,
                     filteredCatTranslations, filteredCatParents, filteredFieldNameTrans, filteredFieldPlaceholderTrans,
@@ -2834,6 +3036,9 @@
                     getTranslation, getTranslationText, getTranslationValue, updateTranslation, getChildCount,
                     getFieldOptionsList, getFieldDependency, getVisibleFieldDependency, getDependencySourceFieldId, getDependencySourceName,
                     getOptionDepsForOption, getOptionFilterDisplay,
+                    fieldOptionDependencies, getFieldOptionDeps, getFieldOptionDepSummary,
+                    showFieldOptionDepModal, fieldOptionDepFieldId, fieldOptionDepFieldLabel, fieldOptionDepSearch,
+                    fieldOptionDepGroupedOptions, openFieldOptionDepModal, closeFieldOptionDepModal, toggleFieldOptionDep, removeFieldOptionDeps,
                     getBreadcrumbPathText, slugify, fieldTypeIcon, fieldConfigFields, changeFieldType, updateFieldConfig,
                     hasMissingTranslation, getMissingLanguages, getEntityWarningType,
                     selectCategory, toggleCategoryExpand, toggleFieldExpand,
