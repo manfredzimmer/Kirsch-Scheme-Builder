@@ -250,9 +250,60 @@ The UI is German-language and organized as:
 - Main area: selected category breadcrumb, category summary, field list.
 - Expanded field panel: field translations, placeholder translations, type/config, required toggle, field dependency, boolean control (Steuerung), select options.
 - Select options: inline option editing plus option filtering.
-- Modals: category, field, option, dependency picker, option filter, delete confirmation, translation picker, language management, copy field.
+- Modals: category, field, option, dependency picker, option filter, delete confirmation, translation picker, language management, copy field, preview.
 
 SortableJS is used for category, field, and option ordering. Sortable instances are reinitialized in `reinitSortable()` via `nextTick()` after Vue updates.
+
+### Preview Modal
+
+The Vorschau button in the header opens a modal wizard for testing form behavior with real data.
+
+**Steps:**
+1. **Kategorie**: Searchable category dropdown that progressively narrows. Clicking a parent advances the path; clicking a leaf moves to the fields step. Dropdown stays open after selecting a parent so sub-categories are immediately visible. A clickable breadcrumb above the search input allows navigating back to any ancestor level (or to root via the "Alle" home button).
+2. **Felder**: All fields for the selected leaf category are rendered with real interactive HTML elements, respecting field order (`fieldCategories.order`), field-to-field dependencies (`fieldDependencies` plus `includeWhen` for boolean control), option-to-option filters (`optionDependencies`), and field-level option dependencies (`fieldOptionDependencies`).
+3. **Abschließen**: Cosmetic "Erstellen" button — does nothing.
+
+**State refs:** `showPreviewModal`, `previewStep`, `previewCategoryPath`, `previewFormValues`, `previewCategorySearch`, `previewShowCatDropdown`.
+
+**Computed properties:**
+- `previewAvailableCategories` — children of the current path endpoint, filtered by search query.
+- `previewLeafCategoryId` — last path entry if it has no children, else `null`.
+- `previewFields` — fields linked to the leaf category, sorted by order.
+- `previewHasMoreLevels` — whether the current path endpoint has children.
+- `previewBreadcrumbPath` — joined translation names of the path.
+- `previewFieldRows` — precomputed array of `{ field, visible, options }` per field. Visibility is computed once (field dependency + field option dependency), options are pre-filtered by `optionDependencies`. All logic is wrapped in try-catch to avoid rendering errors.
+- `previewAllRequiredFilled` — whether all required fields (non-boolean) have values.
+
+**Key methods:**
+- `openPreview()` / `closePreview()` — open/close the modal, reset state.
+- `selectPreviewCategory(catId)` — appends to path, auto-advances to fields step on leaf.
+- `goBackToCategory()` — returns to step 1, pops the leaf category from the path, clears search, and re-opens the dropdown so siblings are immediately visible.
+- `initPreviewFormValues()` — initializes form values with defaults (empty string, `false` for booleans, `[]` for multi-select, `''` for date segments).
+- `isFieldVisibleInPreview(fieldId)` — checks `fieldDependencies` (with `includeWhen`) and `fieldOptionDependencies` against current form values.
+- `getPreviewVisibleOptions(fieldId)` — filters options by `optionDependencies`.
+- `togglePreviewSelectOption(fieldId, value)` — toggles a multi-select option value.
+- `isPreviewOptionSelected(fieldId, value)` — checks if an option is selected in multi-select.
+- `setPreviewBoolean(fieldId, value)` — sets a boolean field's value.
+- `previewDateShowAll(field)` — returns true if any date segment visibility is customized.
+- `getDateMin(field)` / `getDateMax(field)` — parses date patterns (`today`, `-y 100`, etc.) into `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM` strings.
+- `getDatePartBound(field, part, bound)` — extracts a single part (`'year'`, `'month'`, `'day'`) from the min/max date string for use as `min`/`max` attribute on individual number inputs.
+- `parseDatePattern(text)` — parses date constraint patterns like `-y 100, -d30` into a Date object.
+- `getPlaceholderText(field)` — returns placeholder text, falling back to field label.
+
+**Field rendering (all types):**
+- `text`: input with maxLength, minLength, pattern hint.
+- `textarea`: textarea with rows, maxLength, minLength, pattern hint.
+- `number`: text input with inputmode numeric, optional unit suffix.
+- `select`: single select or multi-select checkboxes, options filtered by `optionDependencies`.
+- `boolean`: checkbox with label.
+- `date`: native date input (if all day/month/year shown) or individual number inputs for day/month/year with min/max constraints from parsed date patterns.
+- `datetime`: individual number inputs for day/month/year/hour/minute/second with min/max constraints.
+
+**Known issues / constraints:**
+- `v-if` + `v-for` on the same `<option>` element causes `renderList` TypeError in Vue 3 prod build — always separate with `<template>` wrapper.
+- Function calls inside `v-for` render callbacks that access reactive data can trigger recursive re-renders — precompute in `previewFieldRows` computed instead.
+- No dev warnings are available (Vue 3 prod CDN, `vue.global.prod.js`).
+- Ref/computed used in the template **must** be returned from `setup()`. A missing return produces `TypeError: Cannot read properties of undefined (reading '<fieldId>')` — the numeric field ID appears as the property name. (Fixed in `index.html:3692`.)
 
 ## Important Behaviors
 

@@ -275,6 +275,9 @@
                     </button>
                 </div>
                 <div class="flex gap-3">
+                    <button @click="openPreview" class="btn-ghost px-4 py-2 rounded-lg">
+                        <i class="fas fa-eye mr-2"></i>Vorschau
+                    </button>
                     <button @click="showLanguageModal = true" class="btn-ghost px-4 py-2 rounded-lg">
                         <i class="fas fa-language mr-2"></i>Sprachen
                     </button>
@@ -1275,6 +1278,280 @@
                 </div>
             </div>
         </div>
+
+        <!-- Preview Modal -->
+        <div v-if="showPreviewModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-3xl h-[60vh] flex flex-col animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between shrink-0">
+                    <h2 class="modal-title text-2xl">Vorschau</h2>
+                    <button @click="closePreview" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Step indicator -->
+                <div class="px-6 py-3 border-b border-[#3d3528] flex items-center gap-3 text-sm shrink-0">
+                    <span :class="previewStep === 'category' ? 'text-[#d4a853] font-medium' : 'text-[#6b635a]'">
+                        <i class="fas fa-folder mr-1"></i>Kategorie
+                    </span>
+                    <i class="fas fa-chevron-right text-[10px] text-[#6b635a]"></i>
+                    <span :class="previewStep === 'fields' ? 'text-[#d4a853] font-medium' : 'text-[#6b635a]'">
+                        <i class="fas fa-cubes mr-1"></i>Felder
+                    </span>
+                    <i class="fas fa-chevron-right text-[10px] text-[#6b635a]"></i>
+                    <span :class="previewStep === 'done' ? 'text-[#d4a853] font-medium' : 'text-[#6b635a]'">
+                        <i class="fas fa-check mr-1"></i>Abschließen
+                    </span>
+                </div>
+
+                <!-- Body -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    <!-- Category Selection Step -->
+                    <div v-if="previewStep === 'category'" class="space-y-4">
+                        <p class="text-sm text-[#a89f94] mb-2">Wähle eine Kategorie aus, um die Felder in der Vorschau anzuzeigen:</p>
+
+                        <div v-if="previewCategoryPath.length" class="flex items-center gap-1.5 text-xs mb-3 flex-wrap">
+                            <span @click="previewCategoryPath = []; previewCategorySearch = ''"
+                                class="cursor-pointer text-[#6b635a] hover:text-[#d4a853] transition">
+                                <i class="fas fa-home mr-0.5"></i>Alle
+                            </span>
+                            <span v-for="(catId, idx) in previewCategoryPath" :key="catId" class="flex items-center gap-1.5">
+                                <i class="fas fa-chevron-right text-[6px] text-[#6b635a]"></i>
+                                <span @click="previewCategoryPath = previewCategoryPath.slice(0, idx + 1); previewCategorySearch = ''"
+                                    :class="idx === previewCategoryPath.length - 1
+                                        ? 'text-[#d4a853] font-medium'
+                                        : 'text-[#6b635a] hover:text-[#a89f94] cursor-pointer transition'">
+                                    {{ getTranslationText(categories.find(c => c.id === catId)?.translationId) }}
+                                </span>
+                            </span>
+                        </div>
+
+                        <div class="relative">
+                            <input v-model="previewCategorySearch" type="text" placeholder="Kategorie suchen..."
+                                class="input-field w-full px-4 py-2.5 rounded-lg text-sm"
+                                @focus="previewShowCatDropdown = true"
+                                @input="previewShowCatDropdown = true">
+                            <div v-if="previewShowCatDropdown && previewAvailableCategories.length > 0" class="searchable-select-dropdown w-full rounded-lg mt-1">
+                                <div v-for="cat in previewAvailableCategories" :key="cat.id"
+                                    @mousedown.prevent="selectPreviewCategory(cat.id)"
+                                    class="px-4 py-2.5 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0 text-sm flex items-center gap-2">
+                                    <i class="fas fa-folder-open text-[#d4a853] text-xs"></i>
+                                    <span>{{ getTranslationText(cat.translationId) }}</span>
+                                </div>
+                            </div>
+                            <div v-if="previewShowCatDropdown && previewAvailableCategories.length === 0" class="searchable-select-dropdown w-full rounded-lg mt-1 px-4 py-2.5 text-[#6b635a] text-sm">
+                                Keine Kategorien gefunden
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fields Step -->
+                    <div v-if="previewStep === 'fields'" class="space-y-6">
+                        <div v-if="previewLeafCategoryId && previewBreadcrumbPath" class="flex items-center gap-2 text-xs text-[#6b635a] mb-4">
+                            <i class="fas fa-folder text-[#d4a853]"></i>
+                            <span>{{ previewBreadcrumbPath }}</span>
+                        </div>
+
+                        <div v-if="previewFieldRows.length === 0" class="text-center text-[#6b635a] py-16">
+                            <i class="fas fa-cubes text-4xl mb-4 opacity-50"></i>
+                            <p>Diese Kategorie hat keine Felder</p>
+                        </div>
+
+                        <div v-else class="space-y-5">
+                            <div v-for="row in previewFieldRows" :key="row.field.id"
+                                v-show="row.visible"
+                                class="card rounded-xl p-5 animate-fade">
+                                <label class="block text-sm font-medium text-amber-50 mb-1.5">
+                                    {{ getTranslationText(row.field.translationId) }}
+                                    <span v-if="row.field.required" class="text-[#c44536] ml-1">*</span>
+                                </label>
+
+                                <template v-if="row.field.type === 'text'">
+                                    <input :key="'pv-text-' + row.field.id"
+                                        v-model="previewFormValues[row.field.id]"
+                                        type="text"
+                                        :placeholder="getPlaceholderText(row.field) || ''"
+                                        :maxlength="row.field.config?.maxLength || undefined"
+                                        :minlength="row.field.config?.minLength || undefined"
+                                        class="input-field w-full px-4 py-2.5 rounded-lg text-sm">
+                                    <p v-if="row.field.config?.pattern" class="text-[10px] text-[#6b635a] mt-1">
+                                        <i class="fas fa-info-circle mr-1"></i>Muster: {{ row.field.config.pattern }}
+                                    </p>
+                                </template>
+
+                                <template v-else-if="row.field.type === 'textarea'">
+                                    <textarea :key="'pv-ta-' + row.field.id"
+                                        v-model="previewFormValues[row.field.id]"
+                                        :placeholder="getPlaceholderText(row.field) || ''"
+                                        :rows="row.field.config?.rows || 4"
+                                        :maxlength="row.field.config?.maxLength || undefined"
+                                        :minlength="row.field.config?.minLength || undefined"
+                                        class="input-field w-full px-4 py-2.5 rounded-lg text-sm resize-y"></textarea>
+                                    <p v-if="row.field.config?.pattern" class="text-[10px] text-[#6b635a] mt-1">
+                                        <i class="fas fa-info-circle mr-1"></i>Muster: {{ row.field.config.pattern }}
+                                    </p>
+                                </template>
+
+                                <template v-else-if="row.field.type === 'number'">
+                                    <div class="flex items-center gap-2">
+                                        <input :key="'pv-num-' + row.field.id"
+                                            v-model="previewFormValues[row.field.id]"
+                                            type="text" inputmode="numeric"
+                                            :placeholder="getPlaceholderText(row.field) || ''"
+                                            class="input-field flex-1 px-4 py-2.5 rounded-lg text-sm">
+                                        <span v-if="row.field.config?.unit" class="text-sm text-[#a89f94]">{{ row.field.config.unit }}</span>
+                                    </div>
+                                </template>
+
+                                <template v-else-if="row.field.type === 'select'">
+                                    <div v-if="row.field.config?.multiple">
+                                        <div class="space-y-1.5 max-h-48 overflow-y-auto border border-[#3d3528] rounded-lg p-2">
+                                            <template v-if="row.options.length">
+                                                <div v-for="opt in row.options" :key="opt.id"
+                                                    @click="togglePreviewSelectOption(row.field.id, opt.value)"
+                                                    class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-[#2e2820] transition text-sm">
+                                                    <input :checked="isPreviewOptionSelected(row.field.id, opt.value)"
+                                                        type="checkbox" class="accent-[#d4a853] pointer-events-none">
+                                                    <span>{{ getTranslationText(opt.labelTranslationId) }}</span>
+                                                </div>
+                                            </template>
+                                            <template v-else>
+                                                <div class="text-xs text-[#6b635a] py-2">Keine verfügbaren Optionen</div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <div v-else class="relative">
+                                        <select :key="'pv-sel-' + row.field.id"
+                                            v-model="previewFormValues[row.field.id]"
+                                            class="input-field w-full px-4 py-2.5 rounded-lg text-sm appearance-none">
+                                            <option value="" disabled>{{ getPlaceholderText(row.field) || 'Bitte wählen' }}</option>
+                                            <template v-if="row.options.length">
+                                                <option v-for="opt in row.options" :key="opt.id" :value="opt.value">
+                                                    {{ getTranslationText(opt.labelTranslationId) }}
+                                                </option>
+                                            </template>
+                                        </select>
+                                        <div v-if="row.options.length === 0" class="text-xs text-[#6b635a] py-1">Keine verfügbaren Optionen</div>
+                                    </div>
+                                </template>
+
+                                <template v-else-if="row.field.type === 'boolean'">
+                                    <label class="flex items-center gap-3 cursor-pointer">
+                                        <input :key="'pv-bool-' + row.field.id"
+                                            :checked="previewFormValues[row.field.id] ?? row.field.config?.defaultValue ?? false"
+                                            @change="setPreviewBoolean(row.field.id, $event.target.checked)"
+                                            type="checkbox" class="accent-[#d4a853] w-5 h-5">
+                                        <span class="text-sm text-[#a89f94]">{{ getTranslationText(row.field.translationId) }}</span>
+                                    </label>
+                                </template>
+
+                                <template v-else-if="row.field.type === 'date'">
+                                    <div v-if="previewDateShowAll(row.field)" class="flex gap-2">
+                                        <input v-if="row.field.config?.showDay !== false"
+                                            :key="'pv-d-d-' + row.field.id"
+                                            v-model="previewFormValues[row.field.id + '_day']"
+                                            type="number" min="1" max="31" placeholder="TT"
+                                            class="input-field w-20 px-3 py-2.5 rounded-lg text-sm text-center">
+                                        <input v-if="row.field.config?.showMonth !== false"
+                                            :key="'pv-d-m-' + row.field.id"
+                                            v-model="previewFormValues[row.field.id + '_month']"
+                                            type="number" min="1" max="12" placeholder="MM"
+                                            class="input-field w-20 px-3 py-2.5 rounded-lg text-sm text-center">
+                                        <input v-if="row.field.config?.showYear !== false"
+                                            :key="'pv-d-y-' + row.field.id"
+                                            v-model="previewFormValues[row.field.id + '_year']"
+                                            type="number"
+                                            :min="getDatePartBound(row.field, 'year', 'min') ?? 1900"
+                                            :max="getDatePartBound(row.field, 'year', 'max') ?? 2100"
+                                            placeholder="JJJJ"
+                                            class="input-field w-24 px-3 py-2.5 rounded-lg text-sm text-center">
+                                        <span v-if="row.field.config?.showDay === false && row.field.config?.showMonth === false && row.field.config?.showYear === false" class="text-xs text-[#6b635a] py-2">Keine Datumsteile ausgewählt</span>
+                                    </div>
+                                    <div v-else>
+                                        <input :key="'pv-d-native-' + row.field.id"
+                                            v-model="previewFormValues[row.field.id]"
+                                            type="date"
+                                            :min="getDateMin(row.field)"
+                                            :max="getDateMax(row.field)"
+                                            class="input-field w-full px-4 py-2.5 rounded-lg text-sm">
+                                    </div>
+                                    <p v-if="row.field.config?.minDateText || row.field.config?.maxDateText" class="text-[10px] text-[#6b635a] mt-1">
+                                        <template v-if="row.field.config?.minDateText">Min: {{ row.field.config.minDateText }}</template>
+                                        <template v-if="row.field.config?.minDateText && row.field.config?.maxDateText"> · </template>
+                                        <template v-if="row.field.config?.maxDateText">Max: {{ row.field.config.maxDateText }}</template>
+                                    </p>
+                                </template>
+
+                                <template v-else-if="row.field.type === 'datetime'">
+                                    <div class="flex gap-2 flex-wrap">
+                                        <input v-if="row.field.config?.showDay !== false"
+                                            :key="'pv-dt-d-' + row.field.id"
+                                            v-model="previewFormValues[row.field.id + '_day']"
+                                            type="number" min="1" max="31" placeholder="TT"
+                                            class="input-field w-20 px-3 py-2.5 rounded-lg text-sm text-center">
+                                        <input v-if="row.field.config?.showMonth !== false"
+                                            :key="'pv-dt-m-' + row.field.id"
+                                            v-model="previewFormValues[row.field.id + '_month']"
+                                            type="number" min="1" max="12" placeholder="MM"
+                                            class="input-field w-20 px-3 py-2.5 rounded-lg text-sm text-center">
+                                        <input v-if="row.field.config?.showYear !== false"
+                                            :key="'pv-dt-y-' + row.field.id"
+                                            v-model="previewFormValues[row.field.id + '_year']"
+                                            type="number"
+                                            :min="getDatePartBound(row.field, 'year', 'min') ?? 1900"
+                                            :max="getDatePartBound(row.field, 'year', 'max') ?? 2100"
+                                            placeholder="JJJJ"
+                                            class="input-field w-24 px-3 py-2.5 rounded-lg text-sm text-center">
+                                        <input v-if="row.field.config?.showHour !== false"
+                                            :key="'pv-dt-h-' + row.field.id"
+                                            v-model="previewFormValues[row.field.id + '_hour']"
+                                            type="number" min="0" max="23" placeholder="HH"
+                                            class="input-field w-20 px-3 py-2.5 rounded-lg text-sm text-center">
+                                        <input v-if="row.field.config?.showMinute !== false"
+                                            :key="'pv-dt-mm-' + row.field.id"
+                                            v-model="previewFormValues[row.field.id + '_minute']"
+                                            type="number" min="0" max="59" placeholder="MM"
+                                            class="input-field w-20 px-3 py-2.5 rounded-lg text-sm text-center">
+                                        <input v-if="row.field.config?.showSecond !== false"
+                                            :key="'pv-dt-s-' + row.field.id"
+                                            v-model="previewFormValues[row.field.id + '_second']"
+                                            type="number" min="0" max="59" placeholder="SS"
+                                            class="input-field w-20 px-3 py-2.5 rounded-lg text-sm text-center">
+                                    </div>
+                                    <p v-if="row.field.config?.minDateTimeText || row.field.config?.maxDateTimeText" class="text-[10px] text-[#6b635a] mt-1">
+                                        <template v-if="row.field.config?.minDateTimeText">Min: {{ row.field.config.minDateTimeText }}</template>
+                                        <template v-if="row.field.config?.minDateTimeText && row.field.config?.maxDateTimeText"> · </template>
+                                        <template v-if="row.field.config?.maxDateTimeText">Max: {{ row.field.config.maxDateTimeText }}</template>
+                                    </p>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Buttons -->
+                <div class="px-6 py-4 border-t border-[#3d3528] flex items-center justify-between shrink-0">
+                    <div>
+                        <button v-if="previewStep === 'fields'" @click="goBackToCategory" class="btn-ghost px-4 py-2 rounded-lg text-sm">
+                            <i class="fas fa-arrow-left mr-2"></i>Zurück zur Kategorie
+                        </button>
+                    </div>
+                    <div class="flex gap-3">
+                        <button v-if="previewStep === 'category' && previewLeafCategoryId"
+                            @click="previewStep = 'fields'"
+                            class="btn-primary px-5 py-2 rounded-lg text-sm">
+                            Weiter <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                        <button v-if="previewStep === 'fields'"
+                            :disabled="!previewAllRequiredFilled"
+                            class="px-5 py-2 rounded-lg text-sm"
+                            :class="previewAllRequiredFilled ? 'bg-[#d4a853] text-[#1a1814] hover:bg-[#e8c278]' : 'bg-[#3d3528] text-[#6b635a] cursor-not-allowed'">
+                            <i class="fas fa-check mr-2"></i>Erstellen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1578,6 +1855,14 @@
                 const showRemoveLangModal = ref(false);
                 const removeLangInfo = ref(null);
 
+                // ─── PREVIEW STATE ───
+                const showPreviewModal = ref(false);
+                const previewStep = ref('category');
+                const previewCategoryPath = ref([]);
+                const previewFormValues = ref({});
+                const previewCategorySearch = ref('');
+                const previewShowCatDropdown = ref(false);
+
                 // ─── COMPUTED ───
                 const flatTree = computed(() => {
                     const result = [];
@@ -1726,6 +2011,53 @@
                     }
 
                     return result;
+                });
+
+                const previewAvailableCategories = computed(() => {
+                    const parentId = previewCategoryPath.value.length > 0
+                        ? previewCategoryPath.value[previewCategoryPath.value.length - 1]
+                        : null;
+                    const cats = categories.value
+                        .filter(c => c.parentId === parentId)
+                        .sort((a, b) => a.order - b.order);
+                    if (!previewCategorySearch.value) return cats;
+                    const q = previewCategorySearch.value.toLowerCase();
+                    return cats.filter(c =>
+                        getTranslationText(c.translationId).toLowerCase().includes(q)
+                    );
+                });
+
+                const previewLeafCategoryId = computed(() => {
+                    if (previewCategoryPath.value.length === 0) return null;
+                    const lastId = previewCategoryPath.value[previewCategoryPath.value.length - 1];
+                    const hasChildren = categories.value.some(c => c.parentId === lastId);
+                    return hasChildren ? null : lastId;
+                });
+
+                const previewFields = computed(() => {
+                    const catId = previewLeafCategoryId.value;
+                    if (!catId) return [];
+                    const catFieldIds = fieldCategories.value
+                        .filter(fc => fc.categoryId === catId);
+                    const idOrderMap = new Map(catFieldIds.map(fc => [fc.fieldId, fc.order]));
+                    return fields.value
+                        .filter(f => idOrderMap.has(f.id))
+                        .sort((a, b) => (idOrderMap.get(a.id) ?? 0) - (idOrderMap.get(b.id) ?? 0));
+                });
+
+                const previewHasMoreLevels = computed(() => {
+                    if (previewCategoryPath.value.length === 0) return true;
+                    const lastId = previewCategoryPath.value[previewCategoryPath.value.length - 1];
+                    return categories.value.some(c => c.parentId === lastId);
+                });
+
+                const previewBreadcrumbPath = computed(() => {
+                    const parts = [];
+                    for (const catId of previewCategoryPath.value) {
+                        const cat = categories.value.find(c => c.id === catId);
+                        if (cat) parts.push(getTranslationText(cat.translationId));
+                    }
+                    return parts.join(' > ');
                 });
 
                 const filteredDepFields = computed(() => {
@@ -2986,6 +3318,285 @@
                     return lang ? lang.name : code;
                 }
 
+                // ─── PREVIEW ───
+                function openPreview() {
+                    previewCategoryPath.value = [];
+                    previewFormValues.value = {};
+                    previewCategorySearch.value = '';
+                    previewShowCatDropdown.value = false;
+                    previewStep.value = 'category';
+                    showPreviewModal.value = true;
+                }
+
+                function closePreview() {
+                    showPreviewModal.value = false;
+                }
+
+                function selectPreviewCategory(catId) {
+                    previewCategoryPath.value = [...previewCategoryPath.value, catId];
+                    previewCategorySearch.value = '';
+                    // Keep dropdown open so sub-categories are immediately visible
+                    const hasChildren = categories.value.some(c => c.parentId === catId);
+                    if (!hasChildren) {
+                        previewShowCatDropdown.value = false;
+                        initPreviewFormValues();
+                        previewStep.value = 'fields';
+                    }
+                }
+
+                function goBackToCategory() {
+                    previewStep.value = 'category';
+                    previewCategorySearch.value = '';
+                    previewShowCatDropdown.value = true;
+                    // Pop the leaf category so the user can browse siblings
+                    previewCategoryPath.value = previewCategoryPath.value.slice(0, -1);
+                }
+
+                function getPlaceholderText(field) {
+                    if (field.placeholderTranslationId && field.placeholderTranslationId !== field.translationId) {
+                        return getTranslationText(field.placeholderTranslationId);
+                    }
+                    return getTranslationText(field.translationId);
+                }
+
+                function initPreviewFormValues() {
+                    const vals = {};
+                    for (const field of previewFields.value) {
+                        if (field.type === 'boolean') {
+                            vals[field.id] = field.config?.defaultValue ?? false;
+                        } else if (field.type === 'select' && field.config?.multiple) {
+                            vals[field.id] = [];
+                        } else {
+                            vals[field.id] = '';
+                        }
+                        if (field.type === 'date' || field.type === 'datetime') {
+                            vals[field.id + '_day'] = '';
+                            vals[field.id + '_month'] = '';
+                            vals[field.id + '_year'] = '';
+                            if (field.type === 'datetime') {
+                                vals[field.id + '_hour'] = '';
+                                vals[field.id + '_minute'] = '';
+                                vals[field.id + '_second'] = '';
+                            }
+                        }
+                    }
+                    previewFormValues.value = vals;
+                }
+
+                function isFieldVisibleInPreview(fieldId) {
+                    const field = fields.value.find(f => f.id === fieldId);
+                    if (!field) return true;
+
+                    // Check fieldDependencies
+                    const dep = getVisibleFieldDependency(fieldId, previewLeafCategoryId.value);
+                    if (dep) {
+                        const sourceFieldId = getDependencySourceFieldId(dep);
+                        if (sourceFieldId == null) return true;
+                        const sourceVal = previewFormValues.value[sourceFieldId];
+
+                        if (dep.includeWhen !== undefined) {
+                            // Boolean control
+                            const boolVal = previewFormValues.value[sourceFieldId] ?? false;
+                            if (boolVal !== dep.includeWhen) return false;
+                        } else {
+                            // Regular dependency: show when source is filled
+                            const sourceField = fields.value.find(f => f.id === sourceFieldId);
+                            if (!sourceField) return true;
+                            const isEmpty = sourceVal === '' || sourceVal === null || sourceVal === undefined ||
+                                (Array.isArray(sourceVal) && sourceVal.length === 0);
+                            if (isEmpty) return false;
+                        }
+                    }
+
+                    // Check fieldOptionDependencies
+                    const optDeps = getFieldOptionDeps(fieldId);
+                    if (optDeps.length > 0) {
+                        const anySelected = optDeps.some(d => {
+                            const opt = fieldOptions.value.find(o => o.id === d.optionId);
+                            if (!opt) return false;
+                            const parentSelectField = fields.value.find(f => f.id === opt.fieldId);
+                            if (!parentSelectField) return false;
+                            const selectVal = previewFormValues.value[opt.fieldId];
+                            if (Array.isArray(selectVal)) {
+                                return selectVal.includes(opt.value);
+                            }
+                            return selectVal === opt.value;
+                        });
+                        if (!anySelected) return false;
+                    }
+
+                    return true;
+                }
+
+                function getPreviewVisibleOptions(fieldId) {
+                    const allOpts = getFieldOptionsList(fieldId) || [];
+                    const formVals = previewFormValues.value || {};
+                    return allOpts.filter(opt => {
+                        const deps = optionDependencies.value.filter(d => d.visibleOptionId === opt.id);
+                        if (deps.length === 0) return true;
+                        return deps.some(d => {
+                            const triggerOpt = fieldOptions.value.find(o => o.id === d.optionId);
+                            if (!triggerOpt) return false;
+                            const selectVal = formVals[triggerOpt.fieldId];
+                            if (Array.isArray(selectVal)) {
+                                return selectVal.includes(triggerOpt.value);
+                            }
+                            return selectVal === triggerOpt.value;
+                        });
+                    });
+                }
+
+                function togglePreviewSelectOption(fieldId, value) {
+                    const current = previewFormValues.value[fieldId] || [];
+                    if (Array.isArray(current)) {
+                        const idx = current.indexOf(value);
+                        if (idx >= 0) {
+                            previewFormValues.value = { ...previewFormValues.value, [fieldId]: current.filter(v => v !== value) };
+                        } else {
+                            previewFormValues.value = { ...previewFormValues.value, [fieldId]: [...current, value] };
+                        }
+                    }
+                }
+
+                function isPreviewOptionSelected(fieldId, value) {
+                    const current = previewFormValues.value[fieldId];
+                    return Array.isArray(current) && current.includes(value);
+                }
+
+                function setPreviewBoolean(fieldId, value) {
+                    previewFormValues.value = { ...previewFormValues.value, [fieldId]: value };
+                }
+
+                function previewDateShowAll(field) {
+                    const cfg = field.config || {};
+                    return cfg.showDay === false || cfg.showMonth === false || cfg.showYear === false;
+                }
+
+                function parseDatePattern(text) {
+                    if (!text || text === 'today') {
+                        if (text === 'today') return new Date();
+                        return null;
+                    }
+                    const parts = text.replace(/\s/g, '').split(',');
+                    const now = new Date();
+                    let result = new Date(now);
+                    for (const part of parts) {
+                        const match = part.match(/^([+-])(d|m|y|hh|mm|ss)(\d+)$/);
+                        if (!match) continue;
+                        const sign = match[1] === '+' ? 1 : -1;
+                        const unit = match[2];
+                        const amount = parseInt(match[3], 10);
+                        if (unit === 'd') result.setDate(result.getDate() + sign * amount);
+                        else if (unit === 'm') result.setMonth(result.getMonth() + sign * amount);
+                        else if (unit === 'y') result.setFullYear(result.getFullYear() + sign * amount);
+                        else if (unit === 'hh') result.setHours(result.getHours() + sign * amount);
+                        else if (unit === 'mm') result.setMinutes(result.getMinutes() + sign * amount);
+                        else if (unit === 'ss') result.setSeconds(result.getSeconds() + sign * amount);
+                    }
+                    return result;
+                }
+
+                function getDateMin(field) {
+                    const text = field.config?.minDateText || field.config?.minDateTimeText;
+                    if (!text) return undefined;
+                    const d = parseDatePattern(text);
+                    if (!d) return undefined;
+                    const pad = n => String(n).padStart(2, '0');
+                    if (field.type === 'datetime') {
+                        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                    }
+                    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                }
+
+                function getDateMax(field) {
+                    const text = field.config?.maxDateText || field.config?.maxDateTimeText;
+                    if (!text) return undefined;
+                    const d = parseDatePattern(text);
+                    if (!d) return undefined;
+                    const pad = n => String(n).padStart(2, '0');
+                    if (field.type === 'datetime') {
+                        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                    }
+                    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                }
+
+                function getDatePartBound(field, part, bound) {
+                    const fn = bound === 'min' ? getDateMin : getDateMax;
+                    const d = fn(field);
+                    if (!d) return undefined;
+                    if (part === 'year') return parseInt(d.split('-')[0], 10);
+                    if (part === 'month') return parseInt(d.split('-')[1], 10);
+                    if (part === 'day') return parseInt(d.split('-')[2], 10);
+                    return undefined;
+                }
+
+                const previewAllRequiredFilled = computed(() => {
+                    try {
+                        for (const field of previewFields.value) {
+                            if (!field.required) continue;
+                            const val = previewFormValues.value[field.id];
+                            if (field.type === 'boolean') continue;
+                            if (field.type === 'select' && field.config?.multiple) {
+                                if (!Array.isArray(val) || val.length === 0) return false;
+                                continue;
+                            }
+                            if (val === '' || val === null || val === undefined) return false;
+                        }
+                        return true;
+                    } catch { return true; }
+                });
+
+                const previewFieldRows = computed(() => {
+                    const rows = [];
+                    try {
+                        const formVals = previewFormValues.value || {};
+                        for (const field of previewFields.value) {
+                            const visible = (() => {
+                                const dep = getVisibleFieldDependency(field.id, previewLeafCategoryId.value);
+                                if (dep) {
+                                    const srcId = getDependencySourceFieldId(dep);
+                                    if (srcId == null) return true;
+                                    const srcVal = formVals[srcId];
+                                    if (dep.includeWhen !== undefined) {
+                                        if ((formVals[srcId] ?? false) !== dep.includeWhen) return false;
+                                    } else {
+                                        const empty = srcVal === '' || srcVal === null || srcVal === undefined || (Array.isArray(srcVal) && srcVal.length === 0);
+                                        if (empty) return false;
+                                    }
+                                }
+                                const optDeps = getFieldOptionDeps(field.id);
+                                if (optDeps.length > 0) {
+                                    const anySel = optDeps.some(d => {
+                                        const opt = fieldOptions.value.find(o => o.id === d.optionId);
+                                        if (!opt) return false;
+                                        const sv = formVals[opt.fieldId];
+                                        return Array.isArray(sv) ? sv.includes(opt.value) : sv === opt.value;
+                                    });
+                                    if (!anySel) return false;
+                                }
+                                return true;
+                            })();
+
+                            let options = [];
+                            if (field.type === 'select') {
+                                options = (getFieldOptionsList(field.id) || []).filter(opt => {
+                                    const deps = optionDependencies.value.filter(d => d.visibleOptionId === opt.id);
+                                    if (deps.length === 0) return true;
+                                    return deps.some(d => {
+                                        const to = fieldOptions.value.find(o => o.id === d.optionId);
+                                        if (!to) return false;
+                                        const sv = formVals[to.fieldId];
+                                        return Array.isArray(sv) ? sv.includes(to.value) : sv === to.value;
+                                    });
+                                });
+                            }
+
+                            rows.push({ field, visible, options });
+                        }
+                    } catch { }
+                    return rows;
+                });
+
                 // ─── SORTABLE ───
                 let treeSortable = null;
 
@@ -3108,7 +3719,16 @@
                     confirmDelete, executeDelete, executeLocalDelete,
                     startEditProjectName, newProject, triggerImport, handleFileImport, saveProject,
                     addLanguage, confirmRemoveLanguage, executeRemoveLanguage, getLanguageName,
-                    ISO_LANGUAGES
+                    ISO_LANGUAGES,
+                    showPreviewModal, openPreview, closePreview,
+                    previewStep, previewCategoryPath, previewCategorySearch, previewShowCatDropdown, previewFormValues,
+                    previewAvailableCategories, previewLeafCategoryId, previewFields,
+                    previewHasMoreLevels, previewBreadcrumbPath, previewFieldRows,
+                    selectPreviewCategory, goBackToCategory,
+                    isFieldVisibleInPreview, getPreviewVisibleOptions,
+                    togglePreviewSelectOption, isPreviewOptionSelected, setPreviewBoolean,
+                    previewDateShowAll, getDateMin, getDateMax, getDatePartBound, getPlaceholderText,
+                    previewAllRequiredFilled
                 };
             }
         }).mount('#app');

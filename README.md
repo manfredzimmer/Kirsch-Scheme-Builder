@@ -20,6 +20,7 @@ The app is currently a single-file static application in `index.html`. It runs d
 - Field option dependencies: show a field when specific select options are chosen (configurable via searchable multi-select modal).
 - Drag-and-drop sorting for categories, fields, and options.
 - Editable project name with inline rename.
+- Live form preview: test field behavior, dependencies, and option filters in a modal wizard with category breadcrumb navigation (clickable segments to go back up the tree).
 - Field copy workflows:
   - Reference copy, where one field definition is reused in another category.
   - Deep copy, where a new field is created with copied options.
