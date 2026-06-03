@@ -270,7 +270,7 @@
                     <template v-else>
                         <h1 class="font-display text-2xl text-amber-50">{{ projectName }}</h1>
                     </template>
-                    <button @click="startEditProjectName" class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-sm">
+                    <button @click="startEditProjectName" class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-l">
                         <i class="fas fa-pen"></i>
                     </button>
                 </div>
@@ -312,11 +312,11 @@
                                 :style="{ paddingLeft: (12 + node.depth * 20) + 'px' }">
                                 <button @click.stop="toggleCategoryExpand(node.id)"
                                     class="w-5 h-5 flex items-center justify-center shrink-0 text-[#6b635a] hover:text-[#a89f94] transition">
-                                    <i v-if="node.hasChildren && node.isExpanded" class="fas fa-chevron-down text-xs"></i>
-                                    <i v-else-if="node.hasChildren" class="fas fa-chevron-right text-xs"></i>
+                                    <i v-if="node.hasChildren && node.isExpanded" class="fas fa-chevron-down text-sm"></i>
+                                    <i v-else-if="node.hasChildren" class="fas fa-chevron-right text-sm"></i>
                                     <i v-else class="fas fa-circle text-[4px]"></i>
                                 </button>
-                                <span class="flex-1 text-sm truncate flex items-center gap-1"
+                                <span class="flex-1 text-s truncate flex items-center gap-1"
                                     @click="selectCategory(node.id)">
                                     {{ getTranslationText(node.translationId) }}
                                     <i v-if="getEntityWarningType('category', node.id) === 'missing'"
@@ -332,11 +332,11 @@
                                     {{ getChildCount(node.id) }}
                                 </span>
                                 <button @click.stop="openEditCategory(node)"
-                                    class="icon-btn p-1 rounded hover:bg-[#3d3528] opacity-0 group-hover:opacity-100 transition text-xs">
+                                    class="icon-btn p-1 rounded hover:bg-[#3d3528] opacity-0 group-hover:opacity-100 transition text-sm">
                                     <i class="fas fa-pen"></i>
                                 </button>
                                 <button @click.stop="confirmDelete('category', node)"
-                                    class="icon-btn p-1 rounded hover:bg-[#3d3528] text-[#c44536] opacity-0 group-hover:opacity-100 transition text-xs">
+                                    class="icon-btn p-1 rounded hover:bg-[#3d3528] text-[#c44536] opacity-0 group-hover:opacity-100 transition text-sm">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -353,7 +353,7 @@
                 <main class="flex-1 flex flex-col bg-[#1a1814]">
                     <div v-if="!selectedCategoryId" class="flex-1 flex items-center justify-center text-[#6b635a]">
                         <div class="text-center animate-fade">
-                            <i class="fas fa-arrow-left text-4xl mb-4 opacity-50"></i>
+                            <i class="fas fa-arrow-left text-6xl mb-4 opacity-50"></i>
                             <p>Wähle eine Kategorie aus</p>
                         </div>
                     </div>
@@ -361,9 +361,9 @@
                         <!-- Breadcrumb -->
                         <div class="px-6 py-3 border-b border-[#3d3528] flex items-center gap-2 flex-wrap shrink-0">
                             <span class="flex items-center">
-                                <span @click="selectedCategoryId = null" class="breadcrumb-link text-sm">Root</span>
+                                <span @click="selectedCategoryId = null" class="breadcrumb-link text-s">Root</span>
                             </span>
-                            <span v-for="(crumb, index) in currentBreadcrumbs" :key="crumb.id" class="flex items-center text-sm">
+                            <span v-for="(crumb, index) in currentBreadcrumbs" :key="crumb.id" class="flex items-center text-s">
                                 <span class="mx-2 text-[#6b635a]">&gt;</span>
                                 <span @click="selectCategory(crumb.id)"
                                     :class="crumb.id === selectedCategoryId ? 'breadcrumb-current font-medium' : 'breadcrumb-link'">
@@ -394,17 +394,17 @@
                                         title="Untergeordnete haben fehlende Übersetzungen">
                                     </i>
                                 </h2>
-                                <p v-if="selectedCategory" class="text-xs text-[#6b635a] mt-0.5">
+                                <p v-if="selectedCategory" class="text-sm text-[#6b635a] mt-0.5">
                                     Level {{ selectedCategory.level }} · 
                                     {{ currentFields.length }} Feld(er) · 
                                     {{ getChildCount(selectedCategory.id) }} Unterkategorie(n)
                                 </p>
                             </div>
                             <div class="flex gap-2">
-                                <button @click="openEditCategory(selectedCategory)" class="btn-ghost px-3 py-1.5 rounded-lg text-sm">
+                                <button @click="openEditCategory(selectedCategory)" class="btn-ghost px-3 py-1.5 rounded-lg text-s">
                                     <i class="fas fa-pen mr-1"></i>Bearbeiten
                                 </button>
-                                <button @click="sortFields" class="btn-ghost px-3 py-1.5 rounded-lg text-sm">
+                                <button @click="sortFields" class="btn-ghost px-3 py-1.5 rounded-lg text-s">
                                     <i class="fas fa-sort-alpha-down mr-1"></i>Sortieren
                                 </button>
                             </div>
@@ -428,47 +428,47 @@
                                         class="flex items-center gap-3 px-5 py-3.5 cursor-pointer hover:bg-[#2e2820] transition">
                                         <i class="fas fa-grip-vertical text-[#6b635a] cursor-grab handle-field"></i>
                                         <button @click.stop="toggleFieldExpand(field.id)" class="w-4 text-center text-[#6b635a]">
-                                            <i :class="expandedFieldIds.has(field.id) ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="text-xs"></i>
+                                            <i :class="expandedFieldIds.has(field.id) ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="text-sm"></i>
                                         </button>
-                                        <i :class="fieldTypeIcon(field.type)" class="text-[#a89f94] w-4 text-center text-xs"></i>
-                                        <span class="flex-1 text-sm font-medium flex items-center gap-1">
+                                        <i :class="fieldTypeIcon(field.type)" class="text-[#a89f94] w-4 text-center text-sm"></i>
+                                        <span class="flex-1 text-s font-medium flex items-center gap-1">
                                             {{ getTranslationText(field.translationId) }}
                                             <i v-if="getEntityWarningType('field', field.id) === 'missing'"
-                                                class="fas fa-exclamation-triangle text-[#c44536] text-[10px]"
+                                                class="fas fa-exclamation-triangle text-[#c44536] text-xs"
                                                 :title="'Fehlende Übersetzungen: ' + getMissingLanguages(field.translationId).join(', ')">
                                             </i>
                                             <i v-else-if="getEntityWarningType('field', field.id) === 'children-missing'"
-                                                class="fas fa-exclamation-triangle text-[#d4a853] text-[10px]"
+                                                class="fas fa-exclamation-triangle text-[#d4a853] text-xs"
                                                 title="Optionen haben fehlende Übersetzungen">
                                             </i>
                                         </span>
-                                        <span class="text-[10px] px-2 py-0.5 rounded-full"
+                                        <span class="text-xs px-2 py-0.5 rounded-full"
                                             :class="field.required ? 'bg-[#d4a853] text-[#1a1814]' : 'bg-[#2e2820] text-[#6b635a]'">
                                             {{ field.required ? 'Pflicht' : 'Optional' }}
                                         </span>
-                                        <span class="text-[10px] px-2 py-0.5 rounded bg-[#242118] text-[#6b635a] uppercase tracking-wider">{{ field.type }}</span>
+                                        <span class="text-xs px-2 py-0.5 rounded bg-[#242118] text-[#6b635a] uppercase tracking-wider">{{ field.type }}</span>
                                         <i v-if="getVisibleFieldDependency(field.id)"
-                                            class="fas fa-link text-[#d4a853] text-[10px]"
+                                            class="fas fa-link text-[#d4a853] text-s"
                                             :title="'Abhängig von: ' + getDependencySourceName(getDependencySourceFieldId(getVisibleFieldDependency(field.id)))">
                                         </i>
                                         <i v-if="getVisibleFieldDependency(field.id) && getVisibleFieldDependency(field.id).includeWhen !== undefined"
-                                            class="fas fa-toggle-on text-[#d4a853] text-[10px] ml-0.5"
+                                            class="fas fa-toggle-on text-[#d4a853] text-s ml-0.5"
                                             :title="'Von Boolean gesteuert: ' + (getVisibleFieldDependency(field.id).includeWhen ? 'true' : 'false')">
                                         </i>
                                         <i v-if="getFieldOptionDeps(field.id).length > 0"
-                                            class="fas fa-check-circle text-[#d4a853] text-[10px] ml-0.5"
+                                            class="fas fa-check-circle text-[#d4a853] text-s ml-0.5"
                                             title="Options-Abhängigkeit: wird bei bestimmten Optionen angezeigt">
                                         </i>
                                         <button @click.stop="openCopyModal(field)"
-                                            class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-xs">
+                                            class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-s">
                                             <i class="fas fa-copy"></i>
                                         </button>
                                         <button @click.stop="openEditField(field)"
-                                            class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-xs">
+                                            class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-s">
                                             <i class="fas fa-pen"></i>
                                         </button>
                                         <button @click.stop="confirmDelete('field', field)"
-                                            class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-[#c44536] text-xs">
+                                            class="icon-btn p-1.5 rounded hover:bg-[#3d3528] text-[#c44536] text-s">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -477,27 +477,20 @@
                                     <div v-if="expandedFieldIds.has(field.id)" class="border-t border-[#3d3528] px-5 py-4 space-y-4">
                                         <!-- Name Translation -->
                                         <div>
-                                            <label class="block text-xs text-[#a89f94] mb-1.5">Feldname</label>
-                                            <div class="flex items-center gap-2">
-                                                <div class="flex-1 space-y-1">
-                                                    <div v-for="lang in languages" :key="lang" class="flex items-center gap-2">
-                                                        <span class="text-[10px] text-[#6b635a] w-6 uppercase">{{ lang }}</span>
-                                                        <input :value="getTranslationValue(field.translationId, lang)"
-                                                            @input="updateTranslation(field.translationId, lang, $event.target.value)"
-                                                            class="input-field w-full px-3 py-1.5 rounded-lg text-sm"
-                                                            :placeholder="'Enter ' + lang">
+                                            <label class="block text-sm text-[#a89f94] mb-1.5">Feldname</label>
+                                            <div class="space-y-1">
+                                                <div v-for="lang in languages" :key="lang" class="flex items-center gap-2">
+                                                    <span class="text-[10px] text-[#6b635a] w-6 uppercase">{{ lang }}</span>
+                                                    <div class="w-full min-h-[32px] bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-1.5 text-sm text-amber-50">
+                                                        {{ getTranslationValue(field.translationId, lang) || 'Keine Übersetzung' }}
                                                     </div>
                                                 </div>
-                                                <button @click="openTranslationPicker('fieldName', field)"
-                                                    class="btn-ghost p-1.5 rounded text-xs" title="Übersetzung auswählen">
-                                                    <i class="fas fa-language"></i>
-                                                </button>
                                             </div>
                                         </div>
 
                                         <!-- Placeholder Translation -->
                                         <div>
-                                            <label class="block text-xs text-[#a89f94] mb-1.5">Platzhalter</label>
+                                            <label class="block text-sm text-[#a89f94] mb-1.5">Platzhalter</label>
                                             <div class="flex items-center gap-2">
                                                 <div class="flex-1 space-y-1">
                                                     <div v-for="lang in languages" :key="lang" class="flex items-center gap-2">
@@ -509,7 +502,7 @@
                                                     </div>
                                                 </div>
                                                 <button @click="openTranslationPicker('fieldPlaceholder', field)"
-                                                    class="btn-ghost p-1.5 rounded text-xs" title="Übersetzung auswählen">
+                                                    class="btn-ghost p-1.5 rounded text-s" title="Übersetzung auswählen">
                                                     <i class="fas fa-language"></i>
                                                 </button>
                                             </div>
@@ -517,11 +510,11 @@
 
                                         <!-- Type (editable) -->
                                         <div>
-                                            <label class="block text-xs text-[#a89f94] mb-1.5">Typ</label>
+                                            <label class="block text-sm text-[#a89f94] mb-1.5">Typ</label>
                                             <div class="flex flex-wrap rounded-xl border border-[#3d3528] w-fit">
                                                 <button v-for="t in fieldTypes" :key="t"
                                                     @click="changeFieldType(field, t)"
-                                                    :class="['px-4 py-1.5 text-xs transition', field.type === t ? 'btn-primary' : 'toggle-btn']">
+                                                    :class="['px-4 py-1.5 text-s transition', field.type === t ? 'btn-primary' : 'toggle-btn']">
                                                     {{ t }}
                                                 </button>
                                             </div>
@@ -529,15 +522,15 @@
 
                                         <!-- Config per type -->
                                         <div v-if="fieldConfigFields(field).length > 0">
-                                            <label class="block text-xs text-[#a89f94] mb-1.5">Konfiguration</label>
+                                            <label class="block text-sm text-[#a89f94] mb-1.5">Konfiguration</label>
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div v-for="cfg in fieldConfigFields(field)" :key="cfg.key" class="flex items-center gap-2">
-                                                    <span class="text-xs text-[#6b635a] w-30">{{ cfg.label }}</span>
+                                                    <span class="text-s text-[#6b635a] w-30">{{ cfg.label }}</span>
                                                     <input v-if="cfg.type === 'number'"
                                                         :value="field.config?.[cfg.key] ?? ''"
                                                         @input="updateFieldConfig(field, cfg.key, Number($event.target.value) || '')"
                                                         type="number" :step="cfg.step || 'any'"
-                                                        class="input-field flex-1 px-2 py-1 rounded text-xs">
+                                                        class="input-field flex-1 px-2 py-1 rounded text-sm">
                                                     <input v-else-if="cfg.type === 'checkbox'"
                                                         :key="'cfg-' + field.id + '-' + cfg.key + '-' + (field.config?.[cfg.key] ?? false)"
                                                         :checked="field.config?.[cfg.key] ?? false"
@@ -546,7 +539,7 @@
                                                     <input v-else
                                                         :value="field.config?.[cfg.key] ?? ''"
                                                         @input="updateFieldConfig(field, cfg.key, $event.target.value)"
-                                                        class="input-field flex-1 px-2 py-1 rounded text-xs">
+                                                        class="input-field flex-1 px-2 py-1 rounded text-sm">
                                                 </div>
                                             </div>
                                         </div>
@@ -556,16 +549,16 @@
                                             <input :key="'req-' + field.required"
                                                 v-model="field.required"
                                                 type="checkbox" class="accent-[#d4a853]">
-                                            <label class="text-xs text-[#a89f94]">Required</label>
+                                            <label class="text-sm text-[#a89f94]">Required</label>
                                         </div>
 
                                         <!-- Field dependency -->
                                         <div class="bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-2">
                                             <div class="flex items-center justify-between gap-3">
                                                 <div class="min-w-0">
-                                                    <label class="block text-xs text-[#a89f94] mb-1">Abhängigkeit</label>
+                                                    <label class="block text-sm text-[#a89f94] mb-1">Abhängigkeit</label>
                                                     <div v-if="getVisibleFieldDependency(field.id)"
-                                                        class="flex items-center gap-2 text-xs text-[#a89f94]">
+                                                        class="flex items-center gap-2 text-sm text-[#a89f94]">
                                                         <i class="fas fa-arrow-right text-[#6b635a]"></i>
                                                         <span>Wird angezeigt, wenn <strong class="text-amber-50">{{ getDependencySourceName(getDependencySourceFieldId(getVisibleFieldDependency(field.id))) }}</strong>
                                                             <template v-if="getVisibleFieldDependency(field.id).includeWhen !== undefined">
@@ -580,10 +573,10 @@
                                                             <i class="fas fa-times-circle"></i>
                                                         </button>
                                                     </div>
-                                                    <div v-else class="text-xs text-[#6b635a]">Keine Abhängigkeit</div>
+                                                    <div v-else class="text-sm text-[#6b635a]">Keine Abhängigkeit</div>
                                                 </div>
                                                 <button @click="openAddDependency(field)"
-                                                    class="text-xs text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
+                                                    class="text-sm text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
                                                     <i class="fas fa-plus-circle mr-1"></i>{{ getVisibleFieldDependency(field.id) ? 'Ändern' : 'Abhängigkeit' }}
                                                 </button>
                                             </div>
@@ -593,9 +586,9 @@
                                         <div class="bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-2">
                                             <div class="flex items-center justify-between gap-3">
                                                 <div class="min-w-0">
-                                                    <label class="block text-xs text-[#a89f94] mb-1">Options-Abhängigkeit</label>
+                                                    <label class="block text-sm text-[#a89f94] mb-1">Options-Abhängigkeit</label>
                                                     <div v-if="getFieldOptionDeps(field.id).length > 0"
-                                                        class="flex items-center gap-2 text-xs text-[#a89f94]">
+                                                        class="flex items-center gap-2 text-sm text-[#a89f94]">
                                                         <i class="fas fa-arrow-right text-[#6b635a]"></i>
                                                         <span>Wird angezeigt, wenn eine dieser Optionen gewählt ist: <strong class="text-amber-50">{{ getFieldOptionDepSummary(field.id).join(', ') }}</strong></span>
                                                         <button @click="removeFieldOptionDeps(field.id)"
@@ -603,10 +596,10 @@
                                                             <i class="fas fa-times-circle"></i>
                                                         </button>
                                                     </div>
-                                                    <div v-else class="text-xs text-[#6b635a]">Keine Options-Abhängigkeit</div>
+                                                    <div v-else class="text-sm text-[#6b635a]">Keine Options-Abhängigkeit</div>
                                                 </div>
                                                 <button @click="openFieldOptionDepModal(field)"
-                                                    class="text-xs text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
+                                                    class="text-sm text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
                                                     <i class="fas fa-plus-circle mr-1"></i>{{ getFieldOptionDeps(field.id).length > 0 ? 'Ändern' : 'Optionen' }}
                                                 </button>
                                             </div>
@@ -615,30 +608,30 @@
                                         <!-- Boolean Control -->
                                         <div v-if="field.type === 'boolean'">
                                             <div class="flex items-center justify-between mb-2">
-                                                <label class="text-xs text-[#a89f94]">Steuerung</label>
+                                                <label class="text-sm text-[#a89f94]">Steuerung</label>
                                             </div>
                                             <div class="bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-2 space-y-2">
                                                 <div class="flex items-center justify-between gap-2">
-                                                    <span class="text-xs text-[#a89f94] shrink-0">Bei <strong class="text-amber-50">true</strong> anzeigen:</span>
+                                                    <span class="text-sm text-[#a89f94] shrink-0">Bei <strong class="text-amber-50">true</strong> anzeigen:</span>
                                                     <template v-if="getBooleanControlledField(field.id, true)">
-                                                        <span class="text-xs text-amber-50">{{ getTranslationText(getBooleanControlledField(field.id, true).translationId) }}</span>
-                                                        <button @click="removeBooleanControl(field.id, true)" class="text-[#c44536] hover:text-[#d9584a] text-xs shrink-0">
+                                                        <span class="text-sm text-amber-50">{{ getTranslationText(getBooleanControlledField(field.id, true).translationId) }}</span>
+                                                        <button @click="removeBooleanControl(field.id, true)" class="text-[#c44536] hover:text-[#d9584a] text-sm shrink-0">
                                                             <i class="fas fa-times-circle"></i>
                                                         </button>
                                                     </template>
-                                                    <button v-else @click="openBooleanControlPicker(field, true)" class="text-xs text-[#d4a853] hover:text-[#e8c278] shrink-0">
+                                                    <button v-else @click="openBooleanControlPicker(field, true)" class="text-sm text-[#d4a853] hover:text-[#e8c278] shrink-0">
                                                         <i class="fas fa-plus-circle mr-1"></i>Feld
                                                     </button>
                                                 </div>
                                                 <div class="flex items-center justify-between gap-2">
-                                                    <span class="text-xs text-[#a89f94] shrink-0">Bei <strong class="text-amber-50">false</strong> anzeigen:</span>
+                                                    <span class="text-sm text-[#a89f94] shrink-0">Bei <strong class="text-amber-50">false</strong> anzeigen:</span>
                                                     <template v-if="getBooleanControlledField(field.id, false)">
-                                                        <span class="text-xs text-amber-50">{{ getTranslationText(getBooleanControlledField(field.id, false).translationId) }}</span>
-                                                        <button @click="removeBooleanControl(field.id, false)" class="text-[#c44536] hover:text-[#d9584a] text-xs shrink-0">
+                                                        <span class="text-sm text-amber-50">{{ getTranslationText(getBooleanControlledField(field.id, false).translationId) }}</span>
+                                                        <button @click="removeBooleanControl(field.id, false)" class="text-[#c44536] hover:text-[#d9584a] text-sm shrink-0">
                                                             <i class="fas fa-times-circle"></i>
                                                         </button>
                                                     </template>
-                                                    <button v-else @click="openBooleanControlPicker(field, false)" class="text-xs text-[#d4a853] hover:text-[#e8c278] shrink-0">
+                                                    <button v-else @click="openBooleanControlPicker(field, false)" class="text-sm text-[#d4a853] hover:text-[#e8c278] shrink-0">
                                                         <i class="fas fa-plus-circle mr-1"></i>Feld
                                                     </button>
                                                 </div>
@@ -648,17 +641,17 @@
                                         <!-- Options (for select type) -->
                                         <div v-if="field.type === 'select'">
                                             <div class="flex items-center justify-between mb-2">
-                                                <label class="text-xs text-[#a89f94]">Optionen</label>
+                                                <label class="text-sm text-[#a89f94]">Optionen</label>
                                                 <div class="flex gap-2">
-                                                    <button @click="sortOptions(field)" class="btn-ghost px-2 py-1 rounded text-xs">
+                                                    <button @click="sortOptions(field)" class="btn-ghost px-2 py-1 rounded text-s">
                                                         <i class="fas fa-sort-alpha-down mr-1"></i>Sortieren
                                                     </button>
-                                                    <button @click="openAddOption(field)" class="btn-primary px-3 py-1 rounded text-xs">
+                                                    <button @click="openAddOption(field)" class="btn-primary px-3 py-1 rounded text-s">
                                                         <i class="fas fa-plus mr-1"></i>Option
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div v-if="getFieldOptionsList(field.id).length === 0" class="text-center text-[#6b635a] py-6 text-sm">
+                                            <div v-if="getFieldOptionsList(field.id).length === 0" class="text-center text-[#6b635a] py-6 text-s">
                                                 Keine Optionen
                                             </div>
                                             <div v-else class="space-y-1.5 option-sortable-container">
@@ -667,34 +660,35 @@
                                                     class="bg-[#242118] border border-[#3d3528] rounded-lg overflow-hidden">
                                                     <!-- Option header -->
                                                     <div class="flex items-center gap-2 px-3 py-2">
-                                                        <i class="fas fa-grip-vertical text-[#6b635a] text-xs cursor-grab handle-option"></i>
-                                                        <div class="flex-1 flex items-center gap-2">
-                                                            <input :value="getTranslationText(opt.labelTranslationId)"
-                                                                @input="updateTranslation(opt.labelTranslationId, 'de', $event.target.value)"
-                                                                class="input-field flex-1 px-2 py-1 rounded text-xs bg-[#1a1814]"
-                                                                placeholder="Label (DE)">
-                                                            <span class="text-[10px] text-[#6b635a]">slug:</span>
-                                                            <input v-model="opt.value"
-                                                                class="input-field w-24 px-2 py-1 rounded text-xs bg-[#1a1814] font-mono"
-                                                                placeholder="value">
+                                                        <i class="fas fa-grip-vertical text-[#6b635a] text-sm cursor-grab handle-option"></i>
+                                                        <div class="flex-1 flex items-center gap-2 min-w-0">
+                                                            <span class="flex-1 min-w-0 text-sm text-amber-50 truncate"
+                                                                :title="getTranslationText(opt.labelTranslationId)">
+                                                                {{ getTranslationText(opt.labelTranslationId) }}
+                                                            </span>
+                                                            <span class="text-xs text-[#6b635a] shrink-0">slug:</span>
+                                                            <span class="w-24 text-sm text-[#a89f94] font-mono truncate"
+                                                                :title="opt.value">
+                                                                {{ opt.value }}
+                                                            </span>
                                                             <i v-if="getEntityWarningType('option', opt.id) === 'missing'"
                                                                 class="fas fa-exclamation-triangle text-[#c44536] text-[10px]"
                                                                 :title="'Fehlende Übersetzungen: ' + getMissingLanguages(opt.labelTranslationId).join(', ')">
                                                             </i>
                                                             <button @click="openEditOption(opt)"
-                                                                class="icon-btn p-1 rounded hover:bg-[#3d3528] text-xs">
+                                                                class="icon-btn p-1 rounded hover:bg-[#3d3528] text-s">
                                                                 <i class="fas fa-pen"></i>
                                                             </button>
                                                         </div>
                                                         <button @click="confirmDelete('option', opt)"
-                                                            class="icon-btn p-1 rounded hover:bg-[#3d3528] text-[#c44536] text-xs">
+                                                            class="icon-btn p-1 rounded hover:bg-[#3d3528] text-[#c44536] text-s">
                                                             <i class="fas fa-times"></i>
                                                         </button>
                                                     </div>
                                                     <!-- Option filters for this option -->
                                                     <div class="px-3 pb-2 pl-8">
                                                         <div v-for="fgroup in getOptionFilterDisplay(opt.id)" :key="'of-' + fgroup.fieldId"
-                                                            class="flex items-center gap-2 text-xs text-[#a89f94] mb-1 mt-1">
+                                                            class="flex items-center gap-2 text-sm text-[#a89f94] mb-1 mt-1">
                                                             <i class="fas fa-filter text-[#6b635a]"></i>
                                                             <span>Filtere Optionen in <strong class="text-amber-50">{{ fgroup.fieldName }}</strong>:
                                                                 <span v-for="(o, oi) in fgroup.options" :key="o.id">
@@ -707,7 +701,7 @@
                                                             </button>
                                                         </div>
                                                         <button @click="openOptionFilterModal(opt)"
-                                                            class="text-xs text-[#d4a853] hover:text-[#e8c278] transition">
+                                                            class="text-sm text-[#d4a853] hover:text-[#e8c278] transition">
                                                             <i class="fas fa-plus-circle mr-1"></i>Optionen filtern
                                                         </button>
                                                     </div>
@@ -749,7 +743,7 @@
                         </div>
                         <div v-if="catTransMode === 'new'">
                             <div v-for="lang in languages" :key="lang" class="mb-2">
-                                <label class="block text-xs text-[#6b635a] mb-0.5 uppercase">{{ lang }}</label>
+                                <label class="block text-sm text-[#6b635a] mb-0.5 uppercase">{{ lang }}</label>
                                 <input v-model="catTransNew[lang]" type="text"
                                     class="input-field w-full px-4 py-2 rounded-lg text-sm" :placeholder="lang">
                             </div>
@@ -794,16 +788,16 @@
                         <div class="space-y-2">
                             <div v-for="(kv, kvi) in catMetadata" :key="kvi" class="flex items-center gap-2">
                                 <input v-model="kv.key" placeholder="Key"
-                                    class="input-field w-2/5 px-3 py-1.5 rounded text-xs font-mono">
+                                    class="input-field w-2/5 px-3 py-1.5 rounded text-sm font-mono">
                                 <input v-model="kv.value" placeholder="Value"
-                                    class="input-field w-2/5 px-3 py-1.5 rounded text-xs">
+                                    class="input-field w-2/5 px-3 py-1.5 rounded text-sm">
                                 <button @click="catMetadata.splice(kvi, 1)"
                                     class="text-[#c44536] hover:text-[#d9584a] p-1">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
                             <button @click="catMetadata.push({ key: '', value: '' })"
-                                class="text-xs text-[#d4a853] hover:text-[#e8c278]">
+                                class="text-sm text-[#d4a853] hover:text-[#e8c278]">
                                 <i class="fas fa-plus mr-1"></i>Eintrag hinzufügen
                             </button>
                         </div>
@@ -835,7 +829,7 @@
                         </div>
                         <div v-if="fieldNameMode === 'new'">
                             <div v-for="lang in languages" :key="lang" class="mb-2">
-                                <label class="block text-xs text-[#6b635a] mb-0.5 uppercase">{{ lang }}</label>
+                                <label class="block text-sm text-[#6b635a] mb-0.5 uppercase">{{ lang }}</label>
                                 <input v-model="fieldNameNew[lang]" type="text" class="input-field w-full px-4 py-2 rounded-lg text-sm" :placeholder="lang">
                             </div>
                         </div>
@@ -870,7 +864,7 @@
                         <label class="block text-sm text-[#a89f94] mb-2">Konfiguration</label>
                         <div class="grid grid-cols-2 gap-3">
                             <div v-for="cfg in newFieldConfigFields" :key="cfg.key">
-                                <label class="block text-xs text-[#6b635a] mb-0.5">{{ cfg.label }}</label>
+                                <label class="block text-sm text-[#6b635a] mb-0.5">{{ cfg.label }}</label>
                                 <input v-if="cfg.type === 'number'"
                                     v-model.number="newFieldConfig[cfg.key]"
                                     type="number" :step="cfg.step || 'any'"
@@ -895,7 +889,7 @@
                         </div>
                         <div v-if="fieldPlaceholderMode === 'new'">
                             <div v-for="lang in languages" :key="lang" class="mb-2">
-                                <label class="block text-xs text-[#6b635a] mb-0.5 uppercase">{{ lang }}</label>
+                                <label class="block text-sm text-[#6b635a] mb-0.5 uppercase">{{ lang }}</label>
                                 <input v-model="fieldPlaceholderNew[lang]" type="text" class="input-field w-full px-4 py-2 rounded-lg text-sm" :placeholder="lang">
                             </div>
                         </div>
@@ -948,7 +942,7 @@
                         </div>
                         <div v-if="optionTransMode === 'new'">
                             <div v-for="lang in languages" :key="lang" class="mb-2">
-                                <label class="block text-xs text-[#6b635a] mb-0.5 uppercase">{{ lang }}</label>
+                                <label class="block text-sm text-[#6b635a] mb-0.5 uppercase">{{ lang }}</label>
                                 <input v-model="optionTransNew[lang]"
                                     @input="lang === 'de' && (optionValue = slugify(optionTransNew['de']))"
                                     type="text" class="input-field w-full px-4 py-2 rounded-lg text-sm" :placeholder="lang">
@@ -973,7 +967,7 @@
                         <label class="block text-sm text-[#a89f94] mb-2">Slug-Wert</label>
                         <input v-model="optionValue" type="text" placeholder="z.B. bmw"
                             class="input-field w-full px-4 py-2 rounded-lg text-sm font-mono">
-                        <p class="text-xs text-[#6b635a] mt-1">Eindeutiger Bezeichner für dieses Feld</p>
+                        <p class="text-sm text-[#6b635a] mt-1">Eindeutiger Bezeichner für dieses Feld</p>
                     </div>
                 </div>
                 <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end gap-3">
@@ -993,7 +987,7 @@
                     </button>
                 </div>
                 <div class="px-5 py-4">
-                    <p class="text-xs text-[#a89f94] mb-3">Zeige <strong class="text-amber-50">{{ depPickerFieldLabel }}</strong> erst, wenn folgendes Feld ausgefüllt oder ausgewählt wurde:</p>
+                    <p class="text-sm text-[#a89f94] mb-3">Zeige <strong class="text-amber-50">{{ depPickerFieldLabel }}</strong> erst, wenn folgendes Feld ausgefüllt oder ausgewählt wurde:</p>
                     <div class="relative">
                         <input v-model="depSearch" type="text" placeholder="Feld suchen..."
                             class="input-field w-full px-4 py-2 rounded-lg text-sm">
@@ -1003,7 +997,7 @@
                                 <span class="flex-1">{{ getTranslationText(f.translationId) }}</span>
                                 <span class="text-[10px] text-[#6b635a]">({{ f.type }})</span>
                                 <i v-if="getVisibleFieldDependency(depPickerFieldId) && getDependencySourceFieldId(getVisibleFieldDependency(depPickerFieldId)) === f.id"
-                                    class="fas fa-check text-[#d4a853] text-xs"></i>
+                                    class="fas fa-check text-[#d4a853] text-sm"></i>
                             </div>
                             <div v-if="filteredDepFields.length === 0" class="px-4 py-2 text-[#6b635a] text-sm">Keine Felder verfügbar</div>
                         </div>
@@ -1022,7 +1016,7 @@
                     </button>
                 </div>
                 <div class="px-5 py-4">
-                    <p class="text-xs text-[#a89f94] mb-3">Bei <strong class="text-amber-50">{{ booleanControlPickerValue ? 'true' : 'false' }}</strong> folgendes Feld anzeigen:</p>
+                    <p class="text-sm text-[#a89f94] mb-3">Bei <strong class="text-amber-50">{{ booleanControlPickerValue ? 'true' : 'false' }}</strong> folgendes Feld anzeigen:</p>
                     <div class="relative">
                         <input v-model="booleanControlPickerSearch" type="text" placeholder="Feld suchen..."
                             class="input-field w-full px-4 py-2 rounded-lg text-sm">
@@ -1049,7 +1043,7 @@
                     </button>
                 </div>
                 <div class="px-6 py-5">
-                    <p class="text-xs text-[#a89f94] mb-4">Wenn <strong class="text-amber-50">{{ optionFilterTriggerLabel }}</strong> gewählt ist, nur diese Optionen anzeigen:</p>
+                    <p class="text-sm text-[#a89f94] mb-4">Wenn <strong class="text-amber-50">{{ optionFilterTriggerLabel }}</strong> gewählt ist, nur diese Optionen anzeigen:</p>
                     <div class="relative mb-4">
                         <input v-model="optionFilterSearch" type="text" placeholder="Option suchen..."
                             class="input-field w-full px-4 py-2 rounded-lg text-sm">
@@ -1059,7 +1053,7 @@
                     </div>
                     <div v-for="group in optionFilterGroupedComputed" :key="'g-' + group.fieldId"
                         class="mb-4 bg-[#242118] border border-[#3d3528] rounded-lg overflow-hidden">
-                        <div class="px-4 py-2 border-b border-[#3d3528] text-xs text-[#a89f94] font-medium">
+                        <div class="px-4 py-2 border-b border-[#3d3528] text-sm text-[#a89f94] font-medium">
                             {{ group.fieldName }}
                         </div>
                         <div class="p-2 space-y-0.5">
@@ -1090,7 +1084,7 @@
                     </button>
                 </div>
                 <div class="px-6 py-5">
-                    <p class="text-xs text-[#a89f94] mb-4">Zeige <strong class="text-amber-50">{{ fieldOptionDepFieldLabel }}</strong> wenn eine dieser Optionen gewählt ist:</p>
+                    <p class="text-sm text-[#a89f94] mb-4">Zeige <strong class="text-amber-50">{{ fieldOptionDepFieldLabel }}</strong> wenn eine dieser Optionen gewählt ist:</p>
                     <div class="relative mb-4">
                         <input v-model="fieldOptionDepSearch" type="text" placeholder="Option suchen..."
                             class="input-field w-full px-4 py-2 rounded-lg text-sm">
@@ -1100,7 +1094,7 @@
                     </div>
                     <div v-for="group in fieldOptionDepGroupedOptions" :key="'g-' + group.fieldId"
                         class="mb-4 bg-[#242118] border border-[#3d3528] rounded-lg overflow-hidden">
-                        <div class="px-4 py-2 border-b border-[#3d3528] text-xs text-[#a89f94] font-medium">
+                        <div class="px-4 py-2 border-b border-[#3d3528] text-sm text-[#a89f94] font-medium">
                             {{ group.fieldName }}
                         </div>
                         <div class="p-2 space-y-0.5">
@@ -1136,7 +1130,7 @@
                             <span :style="{ paddingLeft: item.depth * 12 + 'px' }">{{ item.label }}</span>
                         </li>
                     </ul>
-                    <p v-if="deleteLocalAction" class="text-xs text-[#a89f94] mt-4 bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-2">
+                    <p v-if="deleteLocalAction" class="text-sm text-[#a89f94] mt-4 bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-2">
                         Alternative: <strong class="text-amber-50">{{ deleteLocalLabel }}</strong> entfernt nur die Zuordnung in der aktuellen Kategorie bzw. im Kategoriebaum und lässt Referenzen in anderen Kategorien bestehen.
                     </p>
                 </div>
@@ -1310,7 +1304,7 @@
                     <div v-if="previewStep === 'category'" class="space-y-4">
                         <p class="text-sm text-[#a89f94] mb-2">Wähle eine Kategorie aus, um die Felder in der Vorschau anzuzeigen:</p>
 
-                        <div v-if="previewCategoryPath.length" class="flex items-center gap-1.5 text-xs mb-3 flex-wrap">
+                        <div v-if="previewCategoryPath.length" class="flex items-center gap-1.5 text-sm mb-3 flex-wrap">
                             <span @click="previewCategoryPath = []; previewCategorySearch = ''"
                                 class="cursor-pointer text-[#6b635a] hover:text-[#d4a853] transition">
                                 <i class="fas fa-home mr-0.5"></i>Alle
@@ -1335,7 +1329,7 @@
                                 <div v-for="cat in previewAvailableCategories" :key="cat.id"
                                     @mousedown.prevent="selectPreviewCategory(cat.id)"
                                     class="px-4 py-2.5 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0 text-sm flex items-center gap-2">
-                                    <i class="fas fa-folder-open text-[#d4a853] text-xs"></i>
+                                    <i class="fas fa-folder-open text-[#d4a853] text-sm"></i>
                                     <span>{{ getTranslationText(cat.translationId) }}</span>
                                 </div>
                             </div>
@@ -1347,7 +1341,7 @@
 
                     <!-- Fields Step -->
                     <div v-if="previewStep === 'fields'" class="space-y-6">
-                        <div v-if="previewLeafCategoryId && previewBreadcrumbPath" class="flex items-center gap-2 text-xs text-[#6b635a] mb-4">
+                        <div v-if="previewLeafCategoryId && previewBreadcrumbPath" class="flex items-center gap-2 text-sm text-[#6b635a] mb-4">
                             <i class="fas fa-folder text-[#d4a853]"></i>
                             <span>{{ previewBreadcrumbPath }}</span>
                         </div>
@@ -1416,7 +1410,7 @@
                                                 </div>
                                             </template>
                                             <template v-else>
-                                                <div class="text-xs text-[#6b635a] py-2">Keine verfügbaren Optionen</div>
+                                                <div class="text-sm text-[#6b635a] py-2">Keine verfügbaren Optionen</div>
                                             </template>
                                         </div>
                                     </div>
@@ -1431,7 +1425,7 @@
                                                 </option>
                                             </template>
                                         </select>
-                                        <div v-if="row.options.length === 0" class="text-xs text-[#6b635a] py-1">Keine verfügbaren Optionen</div>
+                                        <div v-if="row.options.length === 0" class="text-sm text-[#6b635a] py-1">Keine verfügbaren Optionen</div>
                                     </div>
                                 </template>
 
@@ -1465,7 +1459,7 @@
                                             :max="getDatePartBound(row.field, 'year', 'max') ?? 2100"
                                             placeholder="JJJJ"
                                             class="input-field w-24 px-3 py-2.5 rounded-lg text-sm text-center">
-                                        <span v-if="row.field.config?.showDay === false && row.field.config?.showMonth === false && row.field.config?.showYear === false" class="text-xs text-[#6b635a] py-2">Keine Datumsteile ausgewählt</span>
+                                        <span v-if="row.field.config?.showDay === false && row.field.config?.showMonth === false && row.field.config?.showYear === false" class="text-sm text-[#6b635a] py-2">Keine Datumsteile ausgewählt</span>
                                     </div>
                                     <div v-else>
                                         <input :key="'pv-d-native-' + row.field.id"
@@ -3428,22 +3422,41 @@
                     return true;
                 }
 
-                function getPreviewVisibleOptions(fieldId) {
+                function getPreviewSelectedOptionIds(formVals = previewFormValues.value || {}) {
+                    const ids = new Set();
+                    for (const field of previewFields.value) {
+                        if (field.type !== 'select') continue;
+                        const selected = formVals[field.id];
+                        if (selected === '' || selected === null || selected === undefined) continue;
+
+                        const selectedValues = Array.isArray(selected) ? selected : [selected];
+                        const options = getFieldOptionsList(field.id) || [];
+                        for (const value of selectedValues) {
+                            let opt = options.find(o => o.value === value);
+                            if (!opt) opt = options.find(o => String(o.id) === String(value));
+                            if (opt) ids.add(opt.id);
+                        }
+                    }
+                    return ids;
+                }
+
+                function filterPreviewOptionsBySelectedIds(fieldId, selectedOptionIds) {
                     const allOpts = getFieldOptionsList(fieldId) || [];
-                    const formVals = previewFormValues.value || {};
-                    return allOpts.filter(opt => {
-                        const deps = optionDependencies.value.filter(d => d.visibleOptionId === opt.id);
-                        if (deps.length === 0) return true;
-                        return deps.some(d => {
-                            const triggerOpt = fieldOptions.value.find(o => o.id === d.optionId);
-                            if (!triggerOpt) return false;
-                            const selectVal = formVals[triggerOpt.fieldId];
-                            if (Array.isArray(selectVal)) {
-                                return selectVal.includes(triggerOpt.value);
-                            }
-                            return selectVal === triggerOpt.value;
-                        });
-                    });
+                    const activeDeps = optionDependencies.value.filter(d => selectedOptionIds.has(d.optionId));
+                    const visibleIds = new Set();
+
+                    for (const dep of activeDeps) {
+                        if (allOpts.some(opt => opt.id === dep.visibleOptionId)) {
+                            visibleIds.add(dep.visibleOptionId);
+                        }
+                    }
+
+                    if (visibleIds.size === 0) return allOpts;
+                    return allOpts.filter(opt => visibleIds.has(opt.id));
+                }
+
+                function getPreviewVisibleOptions(fieldId) {
+                    return filterPreviewOptionsBySelectedIds(fieldId, getPreviewSelectedOptionIds());
                 }
 
                 function togglePreviewSelectOption(fieldId, value) {
@@ -3550,6 +3563,7 @@
                     const rows = [];
                     try {
                         const formVals = previewFormValues.value || {};
+                        const selectedOptionIds = getPreviewSelectedOptionIds(formVals);
                         for (const field of previewFields.value) {
                             const visible = (() => {
                                 const dep = getVisibleFieldDependency(field.id, previewLeafCategoryId.value);
@@ -3579,16 +3593,7 @@
 
                             let options = [];
                             if (field.type === 'select') {
-                                options = (getFieldOptionsList(field.id) || []).filter(opt => {
-                                    const deps = optionDependencies.value.filter(d => d.visibleOptionId === opt.id);
-                                    if (deps.length === 0) return true;
-                                    return deps.some(d => {
-                                        const to = fieldOptions.value.find(o => o.id === d.optionId);
-                                        if (!to) return false;
-                                        const sv = formVals[to.fieldId];
-                                        return Array.isArray(sv) ? sv.includes(to.value) : sv === to.value;
-                                    });
-                                });
+                                options = filterPreviewOptionsBySelectedIds(field.id, selectedOptionIds);
                             }
 
                             rows.push({ field, visible, options });
