@@ -670,6 +670,9 @@
                                                     <button @click="sortOptions(field)" class="btn-ghost px-2 py-1 rounded text-s">
                                                         <i class="fas fa-sort-alpha-down mr-1"></i>Sortieren
                                                     </button>
+                                                    <button @click="triggerCSVImport(field)" class="btn-ghost px-2 py-1 rounded text-s">
+                                                        <i class="fas fa-file-import mr-1"></i>Import
+                                                    </button>
                                                     <button @click="openAddOption(field)" class="btn-primary px-3 py-1 rounded text-s">
                                                         <i class="fas fa-plus mr-1"></i>Option
                                                     </button>
@@ -3227,6 +3230,71 @@
                     closeOptionModal();
                 }
 
+                // ─── CSV IMPORT ───
+                function triggerCSVImport(field) {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.csv';
+                    input.addEventListener('change', function (e) {
+                        const file = e.target.files[0];
+                        if (file) {
+                            importOptionsFromCSV(file, field);
+                        }
+                        e.target.value = '';
+                    });
+                    input.click();
+                }
+
+                function importOptionsFromCSV(file, field) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const text = e.target.result;
+                        const lines = text.split('\n').map(function (line) {
+                            return line.trim().replace(/^"+|"+$/g, '');
+                        }).filter(function (line) {
+                            return line.length > 0;
+                        });
+
+                        const existing = fieldOptions.value.filter(function (o) {
+                            return o.fieldId === field.id;
+                        });
+                        const existingSlugs = new Set(existing.map(function (o) {
+                            return o.value;
+                        }));
+                        let order = existing.length;
+                        let importedCount = 0;
+
+                        for (const label of lines) {
+                            let slug = slugify(label);
+                            if (!slug) continue;
+
+                            let uniqueSlug = slug;
+                            let counter = 1;
+                            while (existingSlugs.has(uniqueSlug)) {
+                                uniqueSlug = slug + counter;
+                                counter++;
+                            }
+                            existingSlugs.add(uniqueSlug);
+
+                            const labelId = createTranslation({ de: label });
+                            fieldOptions.value.push({
+                                id: generateId(fieldOptions.value),
+                                fieldId: field.id,
+                                labelTranslationId: labelId,
+                                value: uniqueSlug,
+                                order: order
+                            });
+                            order++;
+                            importedCount++;
+                        }
+
+                        if (importedCount > 0) {
+                            reinitSortable();
+                        }
+                    };
+                    reader.readAsText(file, 'UTF-8');
+                }
+
                 // ─── DEPENDENCY OPERATIONS ───
                 function openAddDependency(field) {
                     depPickerFieldId.value = field.id;
@@ -4033,7 +4101,7 @@
                     selectCategory, toggleCategoryExpand, toggleFieldExpand,
                     openAddCategory, openEditCategory, closeCategoryModal, selectCatTranslation, selectCatParent, saveCategory,
                     openAddField, openEditField, closeFieldModal, selectFieldNameTrans, selectFieldPlaceholderTrans, saveField,
-                    openAddOption, openEditOption, closeOptionModal, selectOptionTrans, saveOption,
+                    openAddOption, openEditOption, closeOptionModal, selectOptionTrans, saveOption, triggerCSVImport, importOptionsFromCSV,
                     openAddDependency, addDependency, removeDependency,
                     openOptionFilterModal, toggleOptionDependency, removeOptionDepGroup,
                     getBooleanControlledField, getAvailableBooleanControlFields,
