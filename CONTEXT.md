@@ -67,6 +67,7 @@ Important fields:
 - `type`
 - `placeholderTranslationId`
 - `required`
+- `requiredCondition` — optional object (see below)
 - `config`
 
 Supported field types are currently:
@@ -80,6 +81,35 @@ Supported field types are currently:
 - `datetime` — same as date plus `minDateTimeText`/`maxDateTimeText` with additional patterns `-hh N`, `-mm N`, `-ss N`, `+hh N`, `+mm N`, `+ss N`, and `showHour`/`showMinute`/`showSecond` checkboxes.
 
 Field-specific config is defined in `getConfigFieldsForType(type)`.
+
+### requiredCondition (optional field property)
+
+The `requiredCondition` property on a field object makes the `required` state depend on which select options the end user chooses. It is stored inline on the field in `fields.json`, not in a separate ZIP file.
+
+Shape:
+
+```json
+{
+  "optionIds": [12, 15],
+  "requiredWhenMet": true,
+  "requiredWhenNotMet": false
+}
+```
+
+Meaning:
+
+- `optionIds` — array of `fieldOptions.id` values. The condition is "met" when at least one of these options is currently selected by the end user.
+- `requiredWhenMet` — whether the field should be required when the condition is met.
+- `requiredWhenNotMet` — whether the field should be required when the condition is not met.
+
+When `requiredWhenMet` and `requiredWhenNotMet` differ, the badge in the field list shows "Pflicht / Optional" (gold border on dark background) instead of the usual gold "Pflicht" or muted "Optional".
+
+Rules:
+
+- A condition must reference at least one valid `fieldOptions` entry to be active. `normalizeFieldRequiredCondition()` deletes conditions whose `optionIds` are all stale.
+- `ensureRequiredCondition(fieldId)` auto-populates `optionIds` from existing `fieldOptionDependencies` entries when creating a new condition from scratch (the "Übernehmen" button in the modal copies them explicitly).
+- `normalizeFieldRequiredConditions()` is called on import, export, field type changes (select→non-select via modal), option/filed deletions, and category deletions.
+- Old exports without `requiredCondition` load normally — the field just uses the plain `required` boolean with no condition.
 
 ### boolean fields
 
@@ -248,9 +278,9 @@ The UI is German-language and organized as:
 
 - Left sidebar: category tree, project actions, language management.
 - Main area: selected category breadcrumb, category summary, field list.
-- Expanded field panel: field translations, placeholder translations, type/config, required toggle, field dependency, boolean control (Steuerung), select options.
+- Expanded field panel: field translations, placeholder translations, type/config, required toggle (with optional conditional-required editor), field dependency, boolean control (Steuerung), select options.
 - Select options: inline option editing plus option filtering.
-- Modals: category, field, option, dependency picker, option filter, delete confirmation, translation picker, language management, copy field, preview.
+- Modals: category, field, option, dependency picker, option filter, delete confirmation, translation picker, language management, copy field, preview, required condition.
 
 SortableJS is used for category, field, and option ordering. Sortable instances are reinitialized in `reinitSortable()` via `nextTick()` after Vue updates.
 
@@ -260,7 +290,7 @@ The Vorschau button in the header opens a modal wizard for testing form behavior
 
 **Steps:**
 1. **Kategorie**: Searchable category dropdown that progressively narrows. Clicking a parent advances the path; clicking a leaf moves to the fields step. Dropdown stays open after selecting a parent so sub-categories are immediately visible. A clickable breadcrumb above the search input allows navigating back to any ancestor level (or to root via the "Alle" home button).
-2. **Felder**: All fields for the selected leaf category are rendered with real interactive HTML elements, respecting field order (`fieldCategories.order`), field-to-field dependencies (`fieldDependencies` plus `includeWhen` for boolean control), option-to-option filters (`optionDependencies`), and field-level option dependencies (`fieldOptionDependencies`).
+2. **Felder**: All fields for the selected leaf category are rendered with real interactive HTML elements, respecting field order (`fieldCategories.order`), field-to-field dependencies (`fieldDependencies` plus `includeWhen` for boolean control), option-to-option filters (`optionDependencies`), and field-level option dependencies (`fieldOptionDependencies`). Required state respects `requiredCondition` and updates reactively when the user changes select options.
 3. **Abschließen**: Cosmetic "Erstellen" button — does nothing.
 
 **State refs:** `showPreviewModal`, `previewStep`, `previewCategoryPath`, `previewFormValues`, `previewCategorySearch`, `previewShowCatDropdown`.
@@ -271,8 +301,8 @@ The Vorschau button in the header opens a modal wizard for testing form behavior
 - `previewFields` — fields linked to the leaf category, sorted by order.
 - `previewHasMoreLevels` — whether the current path endpoint has children.
 - `previewBreadcrumbPath` — joined translation names of the path.
-- `previewFieldRows` — precomputed array of `{ field, visible, options }` per field. Visibility is computed once (field dependency + field option dependency), options are pre-filtered by `optionDependencies`. All logic is wrapped in try-catch to avoid rendering errors.
-- `previewAllRequiredFilled` — whether all required fields (non-boolean) have values.
+- `previewFieldRows` — precomputed array of `{ field, visible, required, options }` per field. Visibility is computed once (field dependency + field option dependency), effective required is computed from `isFieldRequired()` (which respects `requiredCondition`), options are pre-filtered by `optionDependencies`. All logic is wrapped in try-catch to avoid rendering errors.
+- `previewAllRequiredFilled` — whether all required fields (non-boolean) have values. Only visible fields are checked. Required state respects `requiredCondition`.
 
 **Key methods:**
 - `openPreview()` / `closePreview()` — open/close the modal, reset state.
@@ -311,9 +341,9 @@ The Vorschau button in the header opens a modal wizard for testing form behavior
 - Changing a select field to a non-select field removes its field options and option filters that reference those options.
 - Changing a boolean field to a non-boolean field removes its outgoing `includeWhen` dependencies.
 - The delete modal can offer two actions for categories and shared fields:
-  - `Komplett löschen`: global delete. For categories, this removes descendants and all linked fields even if those fields are referenced elsewhere. For fields, this removes all `fieldCategories` links for that field, the field itself, its options, field dependencies where it is source or dependent target, option filters, and unused translations.
+  - `Komplett löschen`: global delete. For categories, this removes descendants and all linked fields even if those fields are referenced elsewhere. For fields, this removes all `fieldCategories` links for that field, the field itself, its options, field dependencies where it is source or dependent target, option filters, unused translations, and normalizes required conditions.
   - Local delete (`Nur Kategorie löschen` / `Nur aus Kategorie entfernen`): removes only links in the selected category or category tree. Shared referenced fields stay available in other categories. After local deletion, `normalizeFieldDependencies()` and `normalizeOptionDependencies()` remove dependencies/filters that are no longer valid for any remaining shared category.
-- Deleting an option removes the option and option filters involving that option.
+- Deleting an option removes the option and option filters involving that option, and normalizes required conditions on fields that referenced the deleted option.
 - Field dependency deletion only removes the dependency row.
 
 ## Editing Guidelines For AI Agents

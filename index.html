@@ -442,9 +442,9 @@
                                                 title="Optionen haben fehlende Übersetzungen">
                                             </i>
                                         </span>
-                                        <span class="text-xs px-2 py-0.5 rounded-full"
-                                            :class="field.required ? 'bg-[#d4a853] text-[#1a1814]' : 'bg-[#2e2820] text-[#6b635a]'">
-                                            {{ field.required ? 'Pflicht' : 'Optional' }}
+                                        <span class="text-xs px-2 py-0.5 rounded-full border"
+                                            :class="getRequiredBadgeClass(field)">
+                                            {{ getRequiredBadgeLabel(field) }}
                                         </span>
                                         <span class="text-xs px-2 py-0.5 rounded bg-[#242118] text-[#6b635a] uppercase tracking-wider">{{ field.type }}</span>
                                         <i v-if="getVisibleFieldDependency(field.id)"
@@ -544,12 +544,36 @@
                                             </div>
                                         </div>
 
-                                        <!-- Required toggle -->
-                                        <div class="flex items-center gap-2">
-                                            <input :key="'req-' + field.required"
-                                                v-model="field.required"
-                                                type="checkbox" class="accent-[#d4a853]">
-                                            <label class="text-sm text-[#a89f94]">Required</label>
+                                        <!-- Required -->
+                                        <div class="bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-2">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <label class="block text-sm text-[#a89f94] mb-1">Required</label>
+                                                    <div class="flex items-center gap-2 text-sm text-[#a89f94]">
+                                                        <input :key="'req-' + field.id + '-' + field.required"
+                                                            v-model="field.required"
+                                                            type="checkbox" class="accent-[#d4a853]">
+                                                        <span>Standard: <strong class="text-amber-50">{{ field.required ? 'Pflicht' : 'Optional' }}</strong></span>
+                                                    </div>
+                                                    <div v-if="getRequiredCondition(field.id)"
+                                                        class="flex items-center gap-2 text-sm text-[#a89f94] mt-2">
+                                                        <i class="fas fa-random text-[#6b635a]"></i>
+                                                        <span>Bedingt: <strong class="text-amber-50">{{ getRequiredConditionSummary(field.id).join(', ') }}</strong>
+                                                            · erfüllt: <strong class="text-amber-50">{{ requiredValueLabel(getRequiredCondition(field.id).requiredWhenMet) }}</strong>
+                                                            · sonst: <strong class="text-amber-50">{{ requiredValueLabel(getRequiredCondition(field.id).requiredWhenNotMet) }}</strong>
+                                                        </span>
+                                                        <button @click="removeRequiredCondition(field.id)"
+                                                            class="text-[#c44536] hover:text-[#d9584a] ml-1">
+                                                            <i class="fas fa-times-circle"></i>
+                                                        </button>
+                                                    </div>
+                                                    <div v-else class="text-sm text-[#6b635a] mt-1">Keine Pflicht-Bedingung</div>
+                                                </div>
+                                                <button @click="openRequiredConditionModal(field)"
+                                                    class="text-sm text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
+                                                    <i class="fas fa-plus-circle mr-1"></i>{{ getRequiredCondition(field.id) ? 'Ändern' : 'Bedingung' }}
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <!-- Field dependency -->
@@ -1115,6 +1139,84 @@
             </div>
         </div>
 
+        <!-- Required Condition Modal -->
+        <div v-if="showRequiredConditionModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between">
+                    <h2 class="modal-title text-2xl">Pflicht-Bedingung</h2>
+                    <button @click="closeRequiredConditionModal" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5">
+                    <div class="mb-4">
+                        <p class="text-sm text-[#a89f94] mb-3">Feld: <strong class="text-amber-50">{{ requiredConditionFieldLabel }}</strong></p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="bg-[#242118] border border-[#3d3528] rounded-lg p-3">
+                                <label class="block text-xs text-[#6b635a] mb-2">Wenn Bedingung erfüllt ist</label>
+                                <div class="flex rounded-lg overflow-hidden border border-[#3d3528]">
+                                    <button @click="setRequiredConditionValue(requiredConditionFieldId, 'requiredWhenMet', true)"
+                                        :class="['flex-1 px-3 py-1.5 text-sm transition', getRequiredConditionValue(requiredConditionFieldId, 'requiredWhenMet') ? 'btn-primary' : 'toggle-btn']">
+                                        Pflicht
+                                    </button>
+                                    <button @click="setRequiredConditionValue(requiredConditionFieldId, 'requiredWhenMet', false)"
+                                        :class="['flex-1 px-3 py-1.5 text-sm transition', !getRequiredConditionValue(requiredConditionFieldId, 'requiredWhenMet') ? 'btn-primary' : 'toggle-btn']">
+                                        Optional
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="bg-[#242118] border border-[#3d3528] rounded-lg p-3">
+                                <label class="block text-xs text-[#6b635a] mb-2">Wenn Bedingung nicht erfüllt ist</label>
+                                <div class="flex rounded-lg overflow-hidden border border-[#3d3528]">
+                                    <button @click="setRequiredConditionValue(requiredConditionFieldId, 'requiredWhenNotMet', true)"
+                                        :class="['flex-1 px-3 py-1.5 text-sm transition', getRequiredConditionValue(requiredConditionFieldId, 'requiredWhenNotMet') ? 'btn-primary' : 'toggle-btn']">
+                                        Pflicht
+                                    </button>
+                                    <button @click="setRequiredConditionValue(requiredConditionFieldId, 'requiredWhenNotMet', false)"
+                                        :class="['flex-1 px-3 py-1.5 text-sm transition', !getRequiredConditionValue(requiredConditionFieldId, 'requiredWhenNotMet') ? 'btn-primary' : 'toggle-btn']">
+                                        Optional
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="relative flex-1">
+                            <input v-model="requiredConditionSearch" type="text" placeholder="Option suchen..."
+                                class="input-field w-full px-4 py-2 rounded-lg text-sm">
+                        </div>
+                        <button v-if="getFieldOptionDeps(requiredConditionFieldId).length > 0"
+                            @click="copyFieldOptionDepsToRequiredCondition(requiredConditionFieldId)"
+                            class="btn-ghost px-3 py-2 rounded-lg text-sm shrink-0">
+                            <i class="fas fa-check-circle mr-1"></i>Übernehmen
+                        </button>
+                    </div>
+                    <div v-if="requiredConditionGroupedOptions.length === 0" class="text-center text-[#6b635a] py-8 text-sm">
+                        Keine Select-Felder mit Optionen in dieser Kategorie
+                    </div>
+                    <div v-for="group in requiredConditionGroupedOptions" :key="'rc-g-' + group.fieldId"
+                        class="mb-4 bg-[#242118] border border-[#3d3528] rounded-lg overflow-hidden">
+                        <div class="px-4 py-2 border-b border-[#3d3528] text-sm text-[#a89f94] font-medium">
+                            {{ group.fieldName }}
+                        </div>
+                        <div class="p-2 space-y-0.5">
+                            <div v-for="opt in group.options" :key="'rc-' + opt.id"
+                                @click="toggleRequiredConditionOption(opt.id)"
+                                class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-[#2e2820] transition">
+                                <input :checked="opt.checked" type="checkbox"
+                                    class="accent-[#d4a853] pointer-events-none">
+                                <span class="text-sm text-amber-50">{{ opt.label }}</span>
+                                <span class="text-[10px] text-[#6b635a] font-mono">({{ opt.value }})</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end">
+                    <button @click="closeRequiredConditionModal" class="btn-primary px-5 py-2.5 rounded-lg">Fertig</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Delete Confirmation Modal -->
         <div v-if="showDeleteModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
             <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
@@ -1357,7 +1459,7 @@
                                 class="card rounded-xl p-5 animate-fade">
                                 <label class="block text-sm font-medium text-amber-50 mb-1.5">
                                     {{ getTranslationText(row.field.translationId) }}
-                                    <span v-if="row.field.required" class="text-[#c44536] ml-1">*</span>
+                                    <span v-if="row.required" class="text-[#c44536] ml-1">*</span>
                                 </label>
 
                                 <template v-if="row.field.type === 'text'">
@@ -1783,6 +1885,167 @@
                     fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d => d.fieldId !== fieldId);
                 }
 
+                // ─── REQUIRED CONDITION PICKER STATE ───
+                const showRequiredConditionModal = ref(false);
+                const requiredConditionFieldId = ref(null);
+                const requiredConditionFieldLabel = ref('');
+                const requiredConditionSearch = ref('');
+
+                const requiredConditionGroupedOptions = computed(() => {
+                    if (!requiredConditionFieldId.value || !selectedCategoryId.value) return [];
+                    const catFieldIds = new Set(getFieldIdsForCategory(selectedCategoryId.value));
+                    const selectFields = fields.value.filter(f => catFieldIds.has(f.id) && f.type === 'select' && f.id !== requiredConditionFieldId.value);
+                    const selectedIds = new Set(getRequiredConditionOptionIds(requiredConditionFieldId.value));
+                    const result = [];
+
+                    for (const field of selectFields) {
+                        const options = getFieldOptionsList(field.id);
+                        const items = options.map(o => ({
+                            id: o.id,
+                            label: getTranslationText(o.labelTranslationId),
+                            value: o.value,
+                            checked: selectedIds.has(o.id)
+                        }));
+                        result.push({
+                            fieldId: field.id,
+                            fieldName: getTranslationText(field.translationId),
+                            options: items
+                        });
+                    }
+
+                    if (requiredConditionSearch.value) {
+                        const q = requiredConditionSearch.value.toLowerCase();
+                        return result.map(g => ({
+                            ...g,
+                            options: g.options.filter(o => o.label.toLowerCase().includes(q))
+                        })).filter(g => g.options.length > 0);
+                    }
+
+                    return result;
+                });
+
+                function getRequiredConditionOptionIds(fieldId) {
+                    const field = fields.value.find(f => f.id === fieldId);
+                    const condition = field?.requiredCondition;
+                    if (!condition) return [];
+
+                    const rawIds = Array.isArray(condition.optionIds)
+                        ? condition.optionIds
+                        : (condition.optionId != null ? [condition.optionId] : []);
+
+                    const validIds = rawIds
+                        .map(id => Number(id))
+                        .filter(id => fieldOptions.value.some(o => o.id === id));
+                    return [...new Set(validIds)];
+                }
+
+                function getRequiredCondition(fieldId) {
+                    const field = fields.value.find(f => f.id === fieldId);
+                    if (!field?.requiredCondition) return null;
+                    return getRequiredConditionOptionIds(fieldId).length > 0 ? field.requiredCondition : null;
+                }
+
+                function ensureRequiredCondition(fieldId) {
+                    const field = fields.value.find(f => f.id === fieldId);
+                    if (!field) return null;
+
+                    if (!field.requiredCondition) {
+                        field.requiredCondition = {
+                            optionIds: [...new Set(getFieldOptionDeps(fieldId).map(d => d.optionId))],
+                            requiredWhenMet: true,
+                            requiredWhenNotMet: false
+                        };
+                    } else {
+                        field.requiredCondition.optionIds = getRequiredConditionOptionIds(fieldId);
+                        if (field.requiredCondition.requiredWhenMet === undefined) {
+                            field.requiredCondition.requiredWhenMet = true;
+                        }
+                        if (field.requiredCondition.requiredWhenNotMet === undefined) {
+                            field.requiredCondition.requiredWhenNotMet = !!field.required;
+                        }
+                    }
+
+                    return field.requiredCondition;
+                }
+
+                function openRequiredConditionModal(field) {
+                    requiredConditionFieldId.value = field.id;
+                    requiredConditionFieldLabel.value = getTranslationText(field.translationId);
+                    requiredConditionSearch.value = '';
+                    ensureRequiredCondition(field.id);
+                    showRequiredConditionModal.value = true;
+                }
+
+                function closeRequiredConditionModal() {
+                    const field = fields.value.find(f => f.id === requiredConditionFieldId.value);
+                    normalizeFieldRequiredCondition(field);
+                    showRequiredConditionModal.value = false;
+                    requiredConditionFieldId.value = null;
+                }
+
+                function toggleRequiredConditionOption(optionId) {
+                    const condition = ensureRequiredCondition(requiredConditionFieldId.value);
+                    if (!condition) return;
+
+                    const selectedIds = new Set(getRequiredConditionOptionIds(requiredConditionFieldId.value));
+                    if (selectedIds.has(optionId)) selectedIds.delete(optionId);
+                    else selectedIds.add(optionId);
+                    condition.optionIds = [...selectedIds];
+                }
+
+                function copyFieldOptionDepsToRequiredCondition(fieldId) {
+                    const condition = ensureRequiredCondition(fieldId);
+                    if (!condition) return;
+                    condition.optionIds = [...new Set(getFieldOptionDeps(fieldId).map(d => d.optionId))];
+                }
+
+                function setRequiredConditionValue(fieldId, key, value) {
+                    const condition = ensureRequiredCondition(fieldId);
+                    if (!condition) return;
+                    condition[key] = !!value;
+                }
+
+                function getRequiredConditionValue(fieldId, key) {
+                    const field = fields.value.find(f => f.id === fieldId);
+                    return !!field?.requiredCondition?.[key];
+                }
+
+                function removeRequiredCondition(fieldId) {
+                    const field = fields.value.find(f => f.id === fieldId);
+                    if (field?.requiredCondition) delete field.requiredCondition;
+                }
+
+                function getRequiredConditionSummary(fieldId) {
+                    return getRequiredConditionOptionIds(fieldId).map(optionId => {
+                        const opt = fieldOptions.value.find(o => o.id === optionId);
+                        return opt ? getTranslationText(opt.labelTranslationId) : '?';
+                    });
+                }
+
+                function requiredValueLabel(value) {
+                    return value ? 'Pflicht' : 'Optional';
+                }
+
+                function getRequiredBadgeLabel(field) {
+                    const condition = getRequiredCondition(field.id);
+                    if (!condition) return field.required ? 'Pflicht' : 'Optional';
+                    const whenMet = !!condition.requiredWhenMet;
+                    const whenNotMet = !!condition.requiredWhenNotMet;
+                    if (whenMet !== whenNotMet) return 'Pflicht / Optional';
+                    return whenMet ? 'Pflicht' : 'Optional';
+                }
+
+                function getRequiredBadgeClass(field) {
+                    const condition = getRequiredCondition(field.id);
+                    if (condition && !!condition.requiredWhenMet !== !!condition.requiredWhenNotMet) {
+                        return 'bg-[#242118] text-[#d4a853] border-[#d4a853]';
+                    }
+                    if (condition ? condition.requiredWhenMet : field.required) {
+                        return 'bg-[#d4a853] text-[#1a1814] border-transparent';
+                    }
+                    return 'bg-[#2e2820] text-[#6b635a] border-transparent';
+                }
+
                 // ─── DEPENDENCY PICKER STATE ───
                 const showDepPicker = ref(false);
                 const depPickerFieldId = ref(null);
@@ -2203,6 +2466,31 @@
                     return normalized;
                 }
 
+                function normalizeFieldRequiredCondition(field) {
+                    if (!field?.requiredCondition) return null;
+
+                    const optionIds = getRequiredConditionOptionIds(field.id);
+                    if (optionIds.length === 0) {
+                        delete field.requiredCondition;
+                        return null;
+                    }
+
+                    field.requiredCondition = {
+                        optionIds,
+                        requiredWhenMet: field.requiredCondition.requiredWhenMet !== undefined
+                            ? !!field.requiredCondition.requiredWhenMet
+                            : true,
+                        requiredWhenNotMet: field.requiredCondition.requiredWhenNotMet !== undefined
+                            ? !!field.requiredCondition.requiredWhenNotMet
+                            : !!field.required
+                    };
+                    return field.requiredCondition;
+                }
+
+                function normalizeFieldRequiredConditions() {
+                    fields.value.forEach(field => normalizeFieldRequiredCondition(field));
+                }
+
                 function getFieldOptionDeps(fieldId) {
                     return fieldOptionDependencies.value.filter(d => d.fieldId === fieldId);
                 }
@@ -2542,6 +2830,7 @@
                             fieldDependencies.value = normalizeFieldDependencies(data['fieldDependencies.json']);
                             optionDependencies.value = normalizeOptionDependencies(data['optionDependencies.json']);
                             fieldOptionDependencies.value = normalizeFieldOptionDependencies(data['fieldOptionDependencies.json']);
+                            normalizeFieldRequiredConditions();
                             translations.value = data['translations.json'];
 
                             const langs = new Set();
@@ -2571,6 +2860,7 @@
                     fieldDependencies.value = normalizeFieldDependencies();
                     optionDependencies.value = normalizeOptionDependencies();
                     fieldOptionDependencies.value = normalizeFieldOptionDependencies();
+                    normalizeFieldRequiredConditions();
                     const zip = new JSZip();
                     zip.file('project.json', JSON.stringify({ name: projectName.value }, null, 2));
                     zip.file('categories.json', JSON.stringify(categories.value, null, 2));
@@ -2805,6 +3095,7 @@
                                     fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d =>
                                         !optIdSet.has(d.optionId)
                                     );
+                                    normalizeFieldRequiredConditions();
                                 }
 
                                 if (wasBoolean && newFieldType.value !== 'boolean') {
@@ -3108,6 +3399,7 @@
                                 !localFieldIdsToDelete.has(d.fieldId) && !localOptionIdsToDelete.has(d.optionId)
                             );
                             fieldOptionDependencies.value = normalizeFieldOptionDependencies();
+                            normalizeFieldRequiredConditions();
                             cleanupOrphanedTranslations();
                             if (selectedCategoryId.value && deleteCatIds.has(selectedCategoryId.value)) {
                                 selectedCategoryId.value = null;
@@ -3130,6 +3422,7 @@
                                 !catFieldIds.has(d.fieldId) && !catOptionIds.has(d.optionId)
                             );
                             fieldOptionDependencies.value = normalizeFieldOptionDependencies();
+                            normalizeFieldRequiredConditions();
                             if (selectedCategoryId.value && deleteCatIds.has(selectedCategoryId.value)) {
                                 selectedCategoryId.value = null;
                             }
@@ -3170,6 +3463,7 @@
                                 fieldDependencies.value = normalizeFieldDependencies();
                                 optionDependencies.value = normalizeOptionDependencies();
                                 fieldOptionDependencies.value = normalizeFieldOptionDependencies();
+                                normalizeFieldRequiredConditions();
                                 cleanupOrphanedTranslations();
                             };
                         }
@@ -3186,6 +3480,7 @@
                             optionDependencies.value = normalizeOptionDependencies();
                             fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d => d.fieldId !== item.id && !fOptIds.has(d.optionId));
                             fieldOptionDependencies.value = normalizeFieldOptionDependencies();
+                            normalizeFieldRequiredConditions();
                             cleanupOrphanedTranslations();
                         };
                     } else if (type === 'option') {
@@ -3201,6 +3496,7 @@
                             optionDependencies.value = normalizeOptionDependencies();
                             fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d => d.optionId !== item.id);
                             fieldOptionDependencies.value = normalizeFieldOptionDependencies();
+                            normalizeFieldRequiredConditions();
                             cleanupOrphanedTranslations();
                         };
                     }
@@ -3543,10 +3839,27 @@
                     return undefined;
                 }
 
+                function isRequiredConditionMet(fieldId, formVals = previewFormValues.value || {}) {
+                    const conditionOptionIds = new Set(getRequiredConditionOptionIds(fieldId));
+                    if (conditionOptionIds.size === 0) return false;
+
+                    const selectedOptionIds = getPreviewSelectedOptionIds(formVals);
+                    return [...conditionOptionIds].some(optionId => selectedOptionIds.has(optionId));
+                }
+
+                function isFieldRequired(field, formVals = previewFormValues.value || {}) {
+                    const condition = getRequiredCondition(field.id);
+                    if (!condition) return !!field.required;
+                    return isRequiredConditionMet(field.id, formVals)
+                        ? !!condition.requiredWhenMet
+                        : !!condition.requiredWhenNotMet;
+                }
+
                 const previewAllRequiredFilled = computed(() => {
                     try {
-                        for (const field of previewFields.value) {
-                            if (!field.required) continue;
+                        for (const row of previewFieldRows.value) {
+                            if (!row.visible || !row.required) continue;
+                            const field = row.field;
                             const val = previewFormValues.value[field.id];
                             if (field.type === 'boolean') continue;
                             if (field.type === 'select' && field.config?.multiple) {
@@ -3596,7 +3909,7 @@
                                 options = filterPreviewOptionsBySelectedIds(field.id, selectedOptionIds);
                             }
 
-                            rows.push({ field, visible, options });
+                            rows.push({ field, visible, required: isFieldRequired(field, formVals), options });
                         }
                     } catch { }
                     return rows;
@@ -3709,6 +4022,12 @@
                     fieldOptionDependencies, getFieldOptionDeps, getFieldOptionDepSummary,
                     showFieldOptionDepModal, fieldOptionDepFieldId, fieldOptionDepFieldLabel, fieldOptionDepSearch,
                     fieldOptionDepGroupedOptions, openFieldOptionDepModal, closeFieldOptionDepModal, toggleFieldOptionDep, removeFieldOptionDeps,
+                    showRequiredConditionModal, requiredConditionFieldId, requiredConditionFieldLabel, requiredConditionSearch,
+                    requiredConditionGroupedOptions, openRequiredConditionModal, closeRequiredConditionModal,
+                    toggleRequiredConditionOption, copyFieldOptionDepsToRequiredCondition,
+                    setRequiredConditionValue, getRequiredConditionValue, removeRequiredCondition,
+                    getRequiredCondition, getRequiredConditionSummary, requiredValueLabel,
+                    getRequiredBadgeLabel, getRequiredBadgeClass, isFieldRequired,
                     getBreadcrumbPathText, slugify, fieldTypeIcon, fieldConfigFields, changeFieldType, updateFieldConfig,
                     hasMissingTranslation, getMissingLanguages, getEntityWarningType,
                     selectCategory, toggleCategoryExpand, toggleFieldExpand,

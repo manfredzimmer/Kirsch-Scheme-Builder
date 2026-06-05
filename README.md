@@ -10,7 +10,7 @@ The app is currently a single-file static application in `index.html`. It runs d
 - Dynamic fields per category.
 - Supported field types: `text`, `textarea`, `number`, `select`, `boolean`, `date`, and `datetime`.
 - Field configuration per type, for example min/max values, text length limits, patterns, textarea rows, units, multi-select, date/time patterns, and visibility toggles for date segments.
-- Required/optional field handling.
+- Required/optional field handling with optional conditional-required state: field requirement can depend on which select options the end user has chosen.
 - Localized field labels, placeholders, category names, and option labels.
 - Language management with missing-translation warnings.
 - Select field options with localized labels, stable slug values, and manual or alphabetical sorting.
@@ -119,6 +119,11 @@ Stores reusable field definitions.
     "type": "select",
     "placeholderTranslationId": 11,
     "required": true,
+    "requiredCondition": {
+      "optionIds": [1, 2],
+      "requiredWhenMet": true,
+      "requiredWhenNotMet": false
+    },
     "config": {
       "multiple": false
     }
@@ -145,7 +150,8 @@ Fields:
 - `translationId`: Label translation id.
 - `type`: One of `text`, `textarea`, `number`, `select`, `boolean`, `date`, or `datetime`.
 - `placeholderTranslationId`: Placeholder translation id, or `null`.
-- `required`: Whether the field is required.
+- `required`: Whether the field is required. When a `requiredCondition` is present, the effective required state depends on which select options the user has chosen.
+- `requiredCondition`: Optional object (see below) that makes the required state conditional on select options.
 - `config`: Type-specific configuration object.
 
   **`date` config:**
@@ -163,6 +169,13 @@ Fields:
   - `showHour` (boolean): Show hour picker.
   - `showMinute` (boolean): Show minute picker.
   - `showSecond` (boolean): Show second picker.
+
+  **`requiredCondition` (optional):**
+  - `optionIds` (number[]): Array of `fieldOptions.id` values. The condition is met when at least one of these options is currently selected by the end user.
+  - `requiredWhenMet` (boolean): Whether the field should be required when the condition is met.
+  - `requiredWhenNotMet` (boolean): Whether the field should be required when the condition is not met.
+
+  When `requiredWhenMet` and `requiredWhenNotMet` differ, the app shows a "Pflicht / Optional" badge (mixed state). When they match, the badge reflects the single value.
 
 ### fieldCategories.json
 
@@ -349,12 +362,19 @@ type Category = {
 
 type FieldType = "text" | "textarea" | "number" | "select" | "boolean" | "date" | "datetime";
 
+type RequiredCondition = {
+  optionIds: number[];
+  requiredWhenMet: boolean;
+  requiredWhenNotMet: boolean;
+};
+
 type Field = {
   id: number;
   translationId: number;
   type: FieldType;
   placeholderTranslationId?: number | null;
   required: boolean;
+  requiredCondition?: RequiredCondition | null;
   config?: Record<string, unknown> | null;
 };
 
@@ -450,6 +470,15 @@ function isFieldVisible(field: Field, values: FormValues, dependencies: FieldDep
   }
 
   return fieldDepMet && optionDepMet;
+}
+
+function isFieldRequired(field: Field, values: FormValues, optionLookup: (optionId: number) => number): boolean {
+  if (!field.requiredCondition) return field.required;
+
+  const condition = field.requiredCondition;
+  const selectedOptionIds = getSelectedOptionIds(values);
+  const isMet = condition.optionIds.some((id) => selectedOptionIds.has(id));
+  return isMet ? condition.requiredWhenMet : condition.requiredWhenNotMet;
 }
 
 function getSelectedOptionIds(values: FormValues) {
@@ -570,6 +599,7 @@ function CategoryForm(props: {
 
 In this example:
 
+- The `isFieldRequired` helper evaluates `requiredCondition` against the current form values and falls back to the plain `required` boolean when no condition is present.
 - The selected category determines which fields are rendered.
 - `translations.json` provides the label and placeholder text for the requested locale.
 - `fieldDependencies.json` controls whether a field is visible (including boolean true/false conditions).
@@ -586,4 +616,5 @@ In this example:
 - Use local delete when a category or field should be removed from the current context without removing shared references elsewhere.
 - `fieldDependencies` with `includeWhen` is used for boolean-controlled field visibility.
 - `fieldOptionDependencies` uses OR logic per field; combined with `fieldDependencies`, AND logic applies.
-- Removing a select field's type strips its options and cleans up related `optionDependencies` and `fieldOptionDependencies`.
+- `requiredCondition` makes field requirement depend on which select options are chosen. When present, evaluate it at runtime by checking if any `optionIds` are in the current selection, then use `requiredWhenMet` or `requiredWhenNotMet` accordingly.
+- Removing a select field's type strips its options and cleans up related `optionDependencies`, `fieldOptionDependencies`, and normalizes `requiredCondition` references.
