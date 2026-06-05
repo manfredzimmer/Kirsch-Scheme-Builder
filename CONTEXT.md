@@ -279,10 +279,10 @@ The UI is German-language and organized as:
 - Left sidebar: category tree, project actions, language management.
 - Main area: selected category breadcrumb, category summary, field list.
 - Expanded field panel: field translations, placeholder translations, type/config, required toggle (with optional conditional-required editor), field dependency, boolean control (Steuerung), select options.
-- Select options: inline option editing plus option filtering.
+- Select options: inline option editing, CSV import, plus option filtering.
 - Modals: category, field, option, dependency picker, option filter, delete confirmation, translation picker, language management, copy field, preview, required condition.
 
-SortableJS is used for category, field, and option ordering. Sortable instances are reinitialized in `reinitSortable()` via `nextTick()` after Vue updates.
+SortableJS is used for category, field, and option ordering. Sortable instances are reinitialized in `reinitSortable()` via `nextTick()` after Vue updates. For option containers with >50 children, Sortable is skipped to avoid performance overhead on large lists.
 
 ### Preview Modal
 
@@ -334,6 +334,29 @@ The Vorschau button in the header opens a modal wizard for testing form behavior
 - Function calls inside `v-for` render callbacks that access reactive data can trigger recursive re-renders — precompute in `previewFieldRows` computed instead.
 - No dev warnings are available (Vue 3 prod CDN, `vue.global.prod.js`).
 - Ref/computed used in the template **must** be returned from `setup()`. A missing return produces `TypeError: Cannot read properties of undefined (reading '<fieldId>')` — the numeric field ID appears as the property name. (Fixed in `index.html:3692`.)
+
+## CSV Import (Select Field Options)
+
+An **Import** button ("Optionen" section header, between "Sortieren" and "+Option") allows bulk-importing field options from a `.csv` file.
+
+- `triggerCSVImport(field)` creates a temporary `<input type="file" accept=".csv">`, opens the file picker, and passes the file to `importOptionsFromCSV`.
+- `importOptionsFromCSV(file, field)` reads the file as UTF-8 text, splits by newlines, strips `"` prefix/suffix, filters empty lines, and for each row:
+  - Generates a slug via `slugify()` (respects ä/ö/ü/ß → ae/oe/ue/ss, removes whitespace and special chars).
+  - Ensures slug uniqueness within the field by appending `1`, `2`, etc. on collision.
+  - Creates a German translation via `createTranslation({ de: label })`.
+  - Pushes a new `fieldOptions` entry with sequential `order`.
+  - Calls `reinitSortable()` after import.
+
+## Performance Optimizations
+
+The following optimizations keep the UI responsive with thousands of field options:
+
+- **`translationMap` computed** — Pre-built `Map<id, translation>` replaces `Array.find()` in `getTranslation()`, giving O(1) lookups instead of O(n) scans through the entire translations array. Rebuilt only when `translations` changes.
+- **`optionsByField` computed** — Groups and sorts all field options by `fieldId` once per `fieldOptions` change, instead of calling `getFieldOptionsList()` in the `v-for` template (which ran on every render).
+- **`v-memo` on option header div** — The option header (translation text, slug, edit/delete buttons) is memoized against `[opt.value, opt.labelTranslationId, opt.order]`. Vue skips the entire subtree when none of those values changed, avoiding expensive `getTranslationText()` and `getEntityWarningType()` calls per option per render.
+- **Guarded `onUpdated`** — `reinitSortable()` only fires when the length of `categories`, `fields`, `fieldOptions`, or `fieldCategories` changes, not on every Vue update (which previously re-initialized SortableJS on 900+ DOM nodes for unrelated state changes).
+- **Large list Sortable guard** — `initOptionSortable()` skips containers with >50 children, since SortableJS is impractical and expensive on very large option lists.
+- **Collapsed options during modal open** — While `showOptionModal` is true, the full option list (hundreds of VNodes) is replaced with a simple count string (`"N Optionen"`). The user cannot interact with options behind the modal overlay anyway, and this eliminates the render-function VNode creation cost on every keystroke inside the modal.
 
 ## Important Behaviors
 

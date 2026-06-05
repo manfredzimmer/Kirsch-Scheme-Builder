@@ -678,15 +678,18 @@
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div v-if="getFieldOptionsList(field.id).length === 0" class="text-center text-[#6b635a] py-6 text-s">
+                                            <div v-if="!optionsByField[field.id]?.length" class="text-center text-[#6b635a] py-6 text-s">
                                                 Keine Optionen
                                             </div>
+                                            <div v-else-if="showOptionModal" class="text-center text-[#6b635a] py-6 text-s">
+                                                {{ optionsByField[field.id].length }} Optionen
+                                            </div>
                                             <div v-else class="space-y-1.5 option-sortable-container">
-                                                <div v-for="opt in getFieldOptionsList(field.id)" :key="opt.id"
+                                                <div v-for="opt in (optionsByField[field.id] || [])" :key="opt.id"
                                                     :data-opt-id="opt.id"
                                                     class="bg-[#242118] border border-[#3d3528] rounded-lg overflow-hidden">
                                                     <!-- Option header -->
-                                                    <div class="flex items-center gap-2 px-3 py-2">
+                                                    <div v-memo="[opt.value, opt.labelTranslationId, opt.order]" class="flex items-center gap-2 px-3 py-2">
                                                         <i class="fas fa-grip-vertical text-[#6b635a] text-sm cursor-grab handle-option"></i>
                                                         <div class="flex-1 flex items-center gap-2 min-w-0">
                                                             <span class="flex-1 min-w-0 text-sm text-amber-50 truncate"
@@ -2333,13 +2336,35 @@
                     );
                 });
 
+                // ─── TRANSLATION MAP ───
+                const translationMap = computed(() => {
+                    const map = new Map();
+                    for (const t of translations.value) {
+                        map.set(t.id, t);
+                    }
+                    return map;
+                });
+
+                // ─── OPTIONS BY FIELD ───
+                const optionsByField = computed(() => {
+                    const map = {};
+                    for (const opt of fieldOptions.value) {
+                        if (!map[opt.fieldId]) map[opt.fieldId] = [];
+                        map[opt.fieldId].push(opt);
+                    }
+                    for (const key of Object.keys(map)) {
+                        map[key].sort((a, b) => a.order - b.order);
+                    }
+                    return map;
+                });
+
                 // ─── HELPERS ───
                 function generateId(arr) {
                     return arr.length > 0 ? Math.max(...arr.map(x => x.id)) + 1 : 1;
                 }
 
                 function getTranslation(id) {
-                    return translations.value.find(t => t.id === id);
+                    return translationMap.value.get(id) || null;
                 }
 
                 function getTranslationText(id) {
@@ -4029,6 +4054,7 @@
 
                 function initOptionSortable() {
                     document.querySelectorAll('.option-sortable-container').forEach(container => {
+                        if (container.children.length > 50) return;
                         if (container._optionSortable) container._optionSortable.destroy();
                         container._optionSortable = Sortable.create(container, {
                             handle: '.handle-option',
@@ -4055,12 +4081,18 @@
                     });
                 }
 
+                let prevDepLengths = '';
+
                 onMounted(() => {
                     if (hasProject.value) reinitSortable();
                 });
 
                 onUpdated(() => {
-                    reinitSortable();
+                    const current = [categories.value.length, fields.value.length, fieldOptions.value.length, fieldCategories.value.length].join(',');
+                    if (current !== prevDepLengths) {
+                        prevDepLengths = current;
+                        reinitSortable();
+                    }
                 });
 
                 return {
@@ -4069,6 +4101,7 @@
                     selectedCategory, selectedCategoryName, currentBreadcrumbs, currentFields, flatTree,
                     filteredCatTranslations, filteredCatParents, filteredFieldNameTrans, filteredFieldPlaceholderTrans,
                     filteredLanguages, filteredDepFields,
+                    translationMap, optionsByField,
                     newFieldType, newFieldRequired, newFieldConfig, newFieldConfigFields,
                     showCategoryModal, editingCategory, catTransMode, catTransNew, catTransSearch, catSelectedTransId,
                     catShowTransDropdown, catParentSearch, catSelectedParentId, catShowParentDropdown, catMetadata,

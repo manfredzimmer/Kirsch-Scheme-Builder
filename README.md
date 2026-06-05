@@ -13,7 +13,7 @@ The app is currently a single-file static application in `index.html`. It runs d
 - Required/optional field handling with optional conditional-required state: field requirement can depend on which select options the end user has chosen.
 - Localized field labels, placeholders, category names, and option labels.
 - Language management with missing-translation warnings.
-- Select field options with localized labels, stable slug values, and manual or alphabetical sorting.
+- Select field options with localized labels, stable slug values, manual or alphabetical sorting, and CSV import.
 - Field dependencies: show one field only after another field in the same category has a value.
 - Boolean field control: boolean fields can control visibility of other fields via true/false conditions.
 - Option filters: restrict options in one select field based on a selected option in another select field.
@@ -606,6 +606,16 @@ In this example:
 - `optionDependencies.json` restricts select options after another option has been selected.
 - `fieldOptionDependencies.json` controls field visibility based on selected options (OR across multiple options, AND with fieldDependencies when both are set).
 - `onSelectedChange` updates the selected option and automatically causes newly visible dependent fields to render on the next state update.
+
+## Performance
+
+The app includes optimizations for handling large datasets:
+
+- Translation lookups use a pre-built `Map<id, translation>` (O(1)) instead of scanning the translations array (O(n)).
+- Field options are grouped by `fieldId` in a computed property that only recalculates when options change, not on every render.
+- Option headers use `v-memo` to skip re-rendering when the slug, translation id, and order haven't changed.
+- SortableJS is not initialized on option lists with more than 50 items to avoid expensive DOM scans.
+- The full option list collapses to a simple count when the option editing modal is open, keeping keystrokes fast even with thousands of options.
 
 ## Development Notes
 
