@@ -290,7 +290,7 @@
             <!-- Two-Column Body -->
             <div class="flex flex-1 overflow-hidden">
                 <!-- Left Panel: Category Tree -->
-                <aside class="w-80 border-r border-[#3d3528] flex flex-col bg-[#1a1814] shrink-0">
+                <aside class="w-96 border-r border-[#3d3528] flex flex-col bg-[#1a1814] shrink-0">
                     <div class="px-4 py-3 border-b border-[#3d3528] flex items-center justify-between">
                         <h2 class="font-display text-lg text-amber-50">Kategorien</h2>
                         <div class="flex gap-1">
@@ -330,6 +330,10 @@
                                 </span>
                                 <span class="text-[10px] text-[#6b635a] px-1.5 py-0.5 rounded bg-[#242118] shrink-0">
                                     {{ getChildCount(node.id) }}
+                                </span>
+                                <span v-if="getCategoryFieldCount(node.id) > 0"
+                                    class="text-[10px] text-[#8bb8f0] px-1.5 py-0.5 rounded bg-[#1a3a5c] shrink-0">
+                                    {{ getCategoryFieldCount(node.id) }} <i class="fas fa-cube text-[8px]"></i>
                                 </span>
                                 <button @click.stop="openEditCategory(node)"
                                     class="icon-btn p-1 rounded hover:bg-[#3d3528] opacity-0 group-hover:opacity-100 transition text-sm">
@@ -2738,6 +2742,10 @@
                     return categories.value.filter(c => c.parentId === categoryId).length;
                 }
 
+                function getCategoryFieldCount(categoryId) {
+                    return fieldCategories.value.filter(fc => fc.categoryId === categoryId).length;
+                }
+
                 function getFieldOptionsList(fieldId) {
                     return fieldOptions.value
                         .filter(o => o.fieldId === fieldId)
@@ -4534,7 +4542,7 @@
                     showDeleteModal, deletePreview, deleteLocalAction, deletePrimaryLabel, deleteLocalLabel,
                     showTransPicker, transPickerSearch, filteredTransPicker, openTranslationPicker, selectTransPicker,
                     showLanguageModal, languageSearch, showLanguageDropdown, showRemoveLangModal, removeLangInfo,
-                    getTranslation, getTranslationText, getTranslationValue, updateTranslation, getChildCount,
+                    getTranslation, getTranslationText, getTranslationValue, updateTranslation, getChildCount, getCategoryFieldCount,
                     getFieldOptionsList, getFieldDependency, getVisibleFieldDependency, getDependencySourceFieldId, getDependencySourceName,
                     getOptionDepsForOption, getOptionFilterDisplay,
                     getFieldOptionDeps, getFieldOptionDepSummary,

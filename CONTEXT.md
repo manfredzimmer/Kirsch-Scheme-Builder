@@ -307,7 +307,7 @@ The `languages` ref is derived from translation keys during import. Use `createT
 
 The UI is German-language and organized as:
 
-- Left sidebar: category tree, project actions, language management.
+- Left sidebar: category tree, project actions, language management. Each category shows its child count and, if non-zero, its direct field count (blue badge with cube icon).
 - Main area: selected category breadcrumb, category summary, field list. Each field header shows its type icon, name (with missing-translation warnings), required badge, multi-select badge (for select fields), field type label, and a share-alt icon when the field is shared across multiple categories.
 - Expanded field panel: field translations, placeholder translations, type/config, required toggle (with optional conditional-required editor), field dependency, boolean control (Steuerung), select options.
 - Select options: inline option editing, CSV import, plus option filtering.
