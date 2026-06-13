@@ -384,7 +384,14 @@ The following optimizations keep the UI responsive with thousands of field optio
 
 - **`translationMap` computed** — Pre-built `Map<id, translation>` replaces `Array.find()` in `getTranslation()`, giving O(1) lookups instead of O(n) scans through the entire translations array. Rebuilt only when `translations` changes.
 - **`optionsByField` computed** — Groups and sorts all field options by `fieldId` once per `fieldOptions` change, instead of calling `getFieldOptionsList()` in the `v-for` template (which ran on every render).
+- **Precomputed display maps** — Several computed properties build lookup maps that recalculate only when their source data changes, not on every render:
+  - `translationTexts` — `Map<id, DE text>` for direct template usage instead of calling `getTranslationText()` (30+ calls per render).
+  - `translationValues` — `Map<id, translation object>` for placeholder and field name display.
+  - `missingLangs` — `Map<id, missing language array | null>` replaces `getMissingLanguages()` (which filtered `languages` per call).
+  - `fieldWarnings` / `categoryWarnings` / `optionWarnings` — Precomputed warning states replace `getEntityWarningType()`. The category variant was the most expensive: it recursively traversed the category tree and scanned field options for every tree node on every render. These maps only recompute when `fields`, `categories`, or `fieldOptions` change — not when the user types text.
+  - `fieldOptionDeps` — `Map<fieldId, dep array>` replaces inline `filter()` calls in the template.
 - **`v-memo` on option header div** — The option header (translation text, slug, edit/delete buttons) is memoized against `[opt.value, opt.labelTranslationId, opt.order]`. Vue skips the entire subtree when none of those values changed, avoiding expensive `getTranslationText()` and `getEntityWarningType()` calls per option per render.
+- **Direct field property access** — The expanded panel uses `field.requiredCondition` / `field.multiSelectCondition` directly instead of calling `getRequiredCondition(field.id)` / `getMultiSelectCondition(field.id)` (which validated option IDs against `fieldOptions` on every call).
 - **Guarded `onUpdated`** — `reinitSortable()` only fires when the length of `categories`, `fields`, `fieldOptions`, or `fieldCategories` changes, not on every Vue update (which previously re-initialized SortableJS on 900+ DOM nodes for unrelated state changes).
 - **Large list Sortable guard** — `initOptionSortable()` skips containers with >50 children, since SortableJS is impractical and expensive on very large option lists.
 - **Collapsed options during modal open** — While `showOptionModal` is true, the full option list (hundreds of VNodes) is replaced with a simple count string (`"N Optionen"`). The user cannot interact with options behind the modal overlay anyway, and this eliminates the render-function VNode creation cost on every keystroke inside the modal.

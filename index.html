@@ -318,12 +318,12 @@
                                 </button>
                                 <span class="flex-1 text-s truncate flex items-center gap-1"
                                     @click="selectCategory(node.id)">
-                                    {{ getTranslationText(node.translationId) }}
-                                    <i v-if="getEntityWarningType('category', node.id) === 'missing'"
+                                    {{ translationTexts.get(node.translationId) }}
+                                    <i v-if="categoryWarnings.get(node.id) === 'missing'"
                                         class="fas fa-exclamation-triangle text-[#c44536] text-[10px] shrink-0"
-                                        :title="'Fehlende Übersetzungen: ' + getMissingLanguages(node.translationId).join(', ')">
+                                        :title="'Fehlende Übersetzungen: ' + (missingLangs.get(node.translationId) || []).join(', ')">
                                     </i>
-                                    <i v-else-if="getEntityWarningType('category', node.id) === 'children-missing'"
+                                    <i v-else-if="categoryWarnings.get(node.id) === 'children-missing'"
                                         class="fas fa-exclamation-triangle text-[#d4a853] text-[10px] shrink-0"
                                         title="Untergeordnete haben fehlende Übersetzungen">
                                     </i>
@@ -368,11 +368,11 @@
                                 <span @click="selectCategory(crumb.id)"
                                     :class="crumb.id === selectedCategoryId ? 'breadcrumb-current font-medium' : 'breadcrumb-link'">
                                     {{ crumb.name }}
-                                    <i v-if="getEntityWarningType('category', crumb.id) === 'missing'"
+                                    <i v-if="categoryWarnings.get(crumb.id) === 'missing'"
                                         class="fas fa-exclamation-triangle text-[#c44536] text-[10px] ml-1"
-                                        :title="'Fehlende Übersetzungen: ' + getMissingLanguages(crumb.translationId).join(', ')">
+                                        :title="'Fehlende Übersetzungen: ' + (missingLangs.get(crumb.translationId) || []).join(', ')">
                                     </i>
-                                    <i v-else-if="getEntityWarningType('category', crumb.id) === 'children-missing'"
+                                    <i v-else-if="categoryWarnings.get(crumb.id) === 'children-missing'"
                                         class="fas fa-exclamation-triangle text-[#d4a853] text-[10px] ml-1"
                                         title="Untergeordnete haben fehlende Übersetzungen">
                                     </i>
@@ -385,11 +385,11 @@
                             <div>
                                 <h2 class="font-display text-xl text-amber-50 flex items-center gap-2">
                                     {{ selectedCategoryName }}
-                                    <i v-if="selectedCategory && getEntityWarningType('category', selectedCategory.id) === 'missing'"
+                                    <i v-if="selectedCategory && categoryWarnings.get(selectedCategory.id) === 'missing'"
                                         class="fas fa-exclamation-triangle text-[#c44536] text-sm"
-                                        :title="'Fehlende Übersetzungen: ' + getMissingLanguages(selectedCategory.translationId).join(', ')">
+                                        :title="'Fehlende Übersetzungen: ' + (missingLangs.get(selectedCategory.translationId) || []).join(', ')">
                                     </i>
-                                    <i v-else-if="selectedCategory && getEntityWarningType('category', selectedCategory.id) === 'children-missing'"
+                                    <i v-else-if="selectedCategory && categoryWarnings.get(selectedCategory.id) === 'children-missing'"
                                         class="fas fa-exclamation-triangle text-[#d4a853] text-sm"
                                         title="Untergeordnete haben fehlende Übersetzungen">
                                     </i>
@@ -432,12 +432,12 @@
                                         </button>
                                         <i :class="fieldTypeIcon(field.type)" class="text-[#a89f94] w-4 text-center text-sm"></i>
                                         <span class="flex-1 text-s font-medium flex items-center gap-1">
-                                            {{ getTranslationText(field.translationId) }}
-                                            <i v-if="getEntityWarningType('field', field.id) === 'missing'"
+                                            {{ translationTexts.get(field.translationId) }}
+                                            <i v-if="fieldWarnings.get(field.id) === 'missing'"
                                                 class="fas fa-exclamation-triangle text-[#c44536] text-xs"
-                                                :title="'Fehlende Übersetzungen: ' + getMissingLanguages(field.translationId).join(', ')">
+                                                :title="'Fehlende Übersetzungen: ' + (missingLangs.get(field.translationId) || []).join(', ')">
                                             </i>
-                                            <i v-else-if="getEntityWarningType('field', field.id) === 'children-missing'"
+                                            <i v-else-if="fieldWarnings.get(field.id) === 'children-missing'"
                                                 class="fas fa-exclamation-triangle text-[#d4a853] text-xs"
                                                 title="Optionen haben fehlende Übersetzungen">
                                             </i>
@@ -459,7 +459,7 @@
                                             class="fas fa-toggle-on text-[#d4a853] text-s ml-0.5"
                                             :title="'Von Boolean gesteuert: ' + (getVisibleFieldDependency(field.id).includeWhen ? 'true' : 'false')">
                                         </i>
-                                        <i v-if="getFieldOptionDeps(field.id).length > 0"
+                                        <i v-if="(fieldOptionDeps.get(field.id) || []).length > 0"
                                             class="fas fa-check-circle text-[#d4a853] text-s ml-0.5"
                                             title="Options-Abhängigkeit: wird bei bestimmten Optionen angezeigt">
                                         </i>
@@ -486,7 +486,7 @@
                                                 <div v-for="lang in languages" :key="lang" class="flex items-center gap-2">
                                                     <span class="text-[10px] text-[#6b635a] w-6 uppercase">{{ lang }}</span>
                                                     <div class="w-full min-h-[32px] bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-1.5 text-sm text-amber-50">
-                                                        {{ getTranslationValue(field.translationId, lang) || 'Keine Übersetzung' }}
+                                                        {{ (translationValues.get(field.translationId)?.[lang]) || 'Keine Übersetzung' }}
                                                     </div>
                                                 </div>
                                             </div>
@@ -499,7 +499,7 @@
                                                 <div class="flex-1 space-y-1">
                                                     <div v-for="lang in languages" :key="lang" class="flex items-center gap-2">
                                                         <span class="text-[10px] text-[#6b635a] w-6 uppercase">{{ lang }}</span>
-                                                        <input :value="getTranslationValue(field.placeholderTranslationId, lang)"
+                                                        <input :value="translationValues.get(field.placeholderTranslationId)?.[lang] || ''"
                                                             @input="updateTranslation(field.placeholderTranslationId, lang, $event.target.value)"
                                                             class="input-field w-full px-3 py-1.5 rounded-lg text-sm"
                                                             :placeholder="'Enter ' + lang">
@@ -561,12 +561,12 @@
                                                             type="checkbox" class="accent-[#d4a853]">
                                                         <span>Standard: <strong class="text-amber-50">{{ field.required ? 'Pflicht' : 'Optional' }}</strong></span>
                                                     </div>
-                                                    <div v-if="getRequiredCondition(field.id)"
+                                                    <div v-if="field.requiredCondition"
                                                         class="flex items-center gap-2 text-sm text-[#a89f94] mt-2">
                                                         <i class="fas fa-random text-[#6b635a]"></i>
                                                         <span>Bedingt: <strong class="text-amber-50">{{ getRequiredConditionSummary(field.id).join(', ') }}</strong>
-                                                            · erfüllt: <strong class="text-amber-50">{{ requiredValueLabel(getRequiredCondition(field.id).requiredWhenMet) }}</strong>
-                                                            · sonst: <strong class="text-amber-50">{{ requiredValueLabel(getRequiredCondition(field.id).requiredWhenNotMet) }}</strong>
+                                                            · erfüllt: <strong class="text-amber-50">{{ requiredValueLabel(field.requiredCondition.requiredWhenMet) }}</strong>
+                                                            · sonst: <strong class="text-amber-50">{{ requiredValueLabel(field.requiredCondition.requiredWhenNotMet) }}</strong>
                                                         </span>
                                                         <button @click="removeRequiredCondition(field.id)"
                                                             class="text-[#c44536] hover:text-[#d9584a] ml-1">
@@ -577,7 +577,7 @@
                                                 </div>
                                                 <button @click="openRequiredConditionModal(field)"
                                                     class="text-sm text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
-                                                    <i class="fas fa-plus-circle mr-1"></i>{{ getRequiredCondition(field.id) ? 'Ändern' : 'Bedingung' }}
+                                                    <i class="fas fa-plus-circle mr-1"></i>{{ field.requiredCondition ? 'Ändern' : 'Bedingung' }}
                                                 </button>
                                             </div>
                                         </div>
@@ -594,12 +594,12 @@
                                                             type="checkbox" class="accent-[#d4a853]">
                                                         <span>Standard: <strong class="text-amber-50">{{ (field.config?.multiple ?? false) ? 'Mehrfachauswahl' : 'Einfachauswahl' }}</strong></span>
                                                     </div>
-                                                    <div v-if="getMultiSelectCondition(field.id)"
+                                                    <div v-if="field.multiSelectCondition"
                                                         class="flex items-center gap-2 text-sm text-[#a89f94] mt-2">
                                                         <i class="fas fa-random text-[#6b635a]"></i>
                                                         <span>Bedingt: <strong class="text-amber-50">{{ getMultiSelectConditionSummary(field.id).join(', ') }}</strong>
-                                                            · erfüllt: <strong class="text-amber-50">{{ multiSelectValueLabel(getMultiSelectCondition(field.id).multiSelectWhenMet) }}</strong>
-                                                            · sonst: <strong class="text-amber-50">{{ multiSelectValueLabel(getMultiSelectCondition(field.id).multiSelectWhenNotMet) }}</strong>
+                                                            · erfüllt: <strong class="text-amber-50">{{ multiSelectValueLabel(field.multiSelectCondition.multiSelectWhenMet) }}</strong>
+                                                            · sonst: <strong class="text-amber-50">{{ multiSelectValueLabel(field.multiSelectCondition.multiSelectWhenNotMet) }}</strong>
                                                         </span>
                                                         <button @click="removeMultiSelectCondition(field.id)"
                                                             class="text-[#c44536] hover:text-[#d9584a] ml-1">
@@ -610,7 +610,7 @@
                                                 </div>
                                                 <button @click="openMultiSelectConditionModal(field)"
                                                     class="text-sm text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
-                                                    <i class="fas fa-plus-circle mr-1"></i>{{ getMultiSelectCondition(field.id) ? 'Ändern' : 'Bedingung' }}
+                                                    <i class="fas fa-plus-circle mr-1"></i>{{ field.multiSelectCondition ? 'Ändern' : 'Bedingung' }}
                                                 </button>
                                             </div>
                                         </div>
@@ -650,7 +650,7 @@
                                             <div class="flex items-center justify-between gap-3">
                                                 <div class="min-w-0">
                                                     <label class="block text-sm text-[#a89f94] mb-1">Options-Abhängigkeit</label>
-                                                    <div v-if="getFieldOptionDeps(field.id).length > 0"
+                                                    <div v-if="(fieldOptionDeps.get(field.id) || []).length > 0"
                                                         class="flex items-center gap-2 text-sm text-[#a89f94]">
                                                         <i class="fas fa-arrow-right text-[#6b635a]"></i>
                                                         <span>Wird angezeigt, wenn eine dieser Optionen gewählt ist: <strong class="text-amber-50">{{ getFieldOptionDepSummary(field.id).join(', ') }}</strong></span>
@@ -663,7 +663,7 @@
                                                 </div>
                                                 <button @click="openFieldOptionDepModal(field)"
                                                     class="text-sm text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
-                                                    <i class="fas fa-plus-circle mr-1"></i>{{ getFieldOptionDeps(field.id).length > 0 ? 'Ändern' : 'Optionen' }}
+                                                    <i class="fas fa-plus-circle mr-1"></i>{{ (fieldOptionDeps.get(field.id) || []).length > 0 ? 'Ändern' : 'Optionen' }}
                                                 </button>
                                             </div>
                                         </div>
@@ -677,7 +677,7 @@
                                                 <div class="flex items-center justify-between gap-2">
                                                     <span class="text-sm text-[#a89f94] shrink-0">Bei <strong class="text-amber-50">true</strong> anzeigen:</span>
                                                     <template v-if="getBooleanControlledField(field.id, true)">
-                                                        <span class="text-sm text-amber-50">{{ getTranslationText(getBooleanControlledField(field.id, true).translationId) }}</span>
+                                                        <span class="text-sm text-amber-50">{{ translationTexts.get(getBooleanControlledField(field.id, true).translationId) }}</span>
                                                         <button @click="removeBooleanControl(field.id, true)" class="text-[#c44536] hover:text-[#d9584a] text-sm shrink-0">
                                                             <i class="fas fa-times-circle"></i>
                                                         </button>
@@ -689,7 +689,7 @@
                                                 <div class="flex items-center justify-between gap-2">
                                                     <span class="text-sm text-[#a89f94] shrink-0">Bei <strong class="text-amber-50">false</strong> anzeigen:</span>
                                                     <template v-if="getBooleanControlledField(field.id, false)">
-                                                        <span class="text-sm text-amber-50">{{ getTranslationText(getBooleanControlledField(field.id, false).translationId) }}</span>
+                                                        <span class="text-sm text-amber-50">{{ translationTexts.get(getBooleanControlledField(field.id, false).translationId) }}</span>
                                                         <button @click="removeBooleanControl(field.id, false)" class="text-[#c44536] hover:text-[#d9584a] text-sm shrink-0">
                                                             <i class="fas fa-times-circle"></i>
                                                         </button>
@@ -732,17 +732,17 @@
                                                         <i class="fas fa-grip-vertical text-[#6b635a] text-sm cursor-grab handle-option"></i>
                                                         <div class="flex-1 flex items-center gap-2 min-w-0">
                                                             <span class="flex-1 min-w-0 text-sm text-amber-50 truncate"
-                                                                :title="getTranslationText(opt.labelTranslationId)">
-                                                                {{ getTranslationText(opt.labelTranslationId) }}
+                                                                :title="translationTexts.get(opt.labelTranslationId)">
+                                                                {{ translationTexts.get(opt.labelTranslationId) }}
                                                             </span>
                                                             <span class="text-xs text-[#6b635a] shrink-0">slug:</span>
                                                             <span class="w-24 text-sm text-[#a89f94] font-mono truncate"
                                                                 :title="opt.value">
                                                                 {{ opt.value }}
                                                             </span>
-                                                            <i v-if="getEntityWarningType('option', opt.id) === 'missing'"
+                                                            <i v-if="optionWarnings.get(opt.id) === 'missing'"
                                                                 class="fas fa-exclamation-triangle text-[#c44536] text-[10px]"
-                                                                :title="'Fehlende Übersetzungen: ' + getMissingLanguages(opt.labelTranslationId).join(', ')">
+                                                                :title="'Fehlende Übersetzungen: ' + (missingLangs.get(opt.labelTranslationId) || []).join(', ')">
                                                             </i>
                                                             <button @click="openEditOption(opt)"
                                                                 class="icon-btn p-1 rounded hover:bg-[#3d3528] text-s">
@@ -760,10 +760,10 @@
                                                             class="flex items-center gap-2 text-sm text-[#a89f94] mb-1 mt-1">
                                                             <i class="fas fa-filter text-[#6b635a]"></i>
                                                             <span>Filtere Optionen in <strong class="text-amber-50">{{ fgroup.fieldName }}</strong>:
-                                                                <span v-for="(o, oi) in fgroup.options" :key="o.id">
-                                                                    {{ o.label }}<span v-if="oi < fgroup.options.length - 1">, </span>
-                                                                </span>
-                                                            </span>
+                                                                 <span v-for="(o, oi) in fgroup.options" :key="o.id">
+                                                                     {{ o.label }}<span v-if="oi < fgroup.options.length - 1">, </span>
+                                                                 </span>
+                                                             </span>
                                                             <button @click="removeOptionDepGroup(opt.id, fgroup.fieldId)"
                                                                 class="text-[#c44536] hover:text-[#d9584a] ml-1" title="Alle entfernen">
                                                                 <i class="fas fa-times-circle"></i>
@@ -1063,7 +1063,7 @@
                         <div class="searchable-select-dropdown w-full rounded-lg mt-1 relative" v-if="true">
                             <div v-for="f in filteredDepFields" :key="f.id" @click="addDependency(f.id)"
                                 class="flex items-center gap-2 px-4 py-2 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0 text-sm">
-                                <span class="flex-1">{{ getTranslationText(f.translationId) }}</span>
+                                <span class="flex-1">{{ translationTexts.get(f.translationId) }}</span>
                                 <span class="text-[10px] text-[#6b635a]">({{ f.type }})</span>
                                 <i v-if="getVisibleFieldDependency(depPickerFieldId) && getDependencySourceFieldId(getVisibleFieldDependency(depPickerFieldId)) === f.id"
                                     class="fas fa-check text-[#d4a853] text-sm"></i>
@@ -1092,7 +1092,7 @@
                         <div class="searchable-select-dropdown w-full rounded-lg mt-1 relative">
                             <div v-for="f in getAvailableBooleanControlFields(booleanControlPickerFieldId)" :key="f.id" @click="setBooleanControl(booleanControlPickerFieldId, f.id, booleanControlPickerValue)"
                                 class="flex items-center gap-2 px-4 py-2 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0 text-sm">
-                                <span class="flex-1">{{ getTranslationText(f.translationId) }}</span>
+                                <span class="flex-1">{{ translationTexts.get(f.translationId) }}</span>
                                 <span class="text-[10px] text-[#6b635a]">({{ f.type }})</span>
                             </div>
                             <div v-if="getAvailableBooleanControlFields(booleanControlPickerFieldId).length === 0" class="px-4 py-2 text-[#6b635a] text-sm">Keine Felder verfügbar</div>
@@ -1394,7 +1394,7 @@
                 </div>
                 <div class="px-6 py-5">
                     <p class="text-sm text-[#a89f94] mb-2">
-                        Kopiere <strong class="text-amber-50">{{ copySourceField ? getTranslationText(copySourceField.translationId) : '' }}</strong> in Kategorien:
+                        Kopiere <strong class="text-amber-50">{{ copySourceField ? translationTexts.get(copySourceField.translationId) : '' }}</strong> in Kategorien:
                     </p>
                     <div class="relative mb-4">
                         <input v-model="copyCategorySearch" type="text" placeholder="Kategorie suchen..."
@@ -1406,7 +1406,7 @@
                             class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-[#2e2820] transition">
                             <input :checked="copySelectedCategoryIds.has(cat.id)" type="checkbox"
                                 class="accent-[#d4a853] pointer-events-none">
-                            <span class="text-sm text-amber-50">{{ getTranslationText(cat.translationId) }}</span>
+                            <span class="text-sm text-amber-50">{{ translationTexts.get(cat.translationId) }}</span>
                             <span class="text-[10px] text-[#6b635a] ml-auto truncate max-w-[200px]">{{ getBreadcrumbPathText(cat.id) }}</span>
                         </div>
                         <div v-if="filteredCopyCategories.length === 0" class="text-center text-[#6b635a] py-6 text-sm">
@@ -1530,7 +1530,7 @@
                                     :class="idx === previewCategoryPath.length - 1
                                         ? 'text-[#d4a853] font-medium'
                                         : 'text-[#6b635a] hover:text-[#a89f94] cursor-pointer transition'">
-                                    {{ getTranslationText(categories.find(c => c.id === catId)?.translationId) }}
+                                    {{ translationTexts.get(categories.find(c => c.id === catId)?.translationId) }}
                                 </span>
                             </span>
                         </div>
@@ -1545,7 +1545,7 @@
                                     @mousedown.prevent="selectPreviewCategory(cat.id)"
                                     class="px-4 py-2.5 hover:bg-[#3d3528] cursor-pointer border-b border-[#3d3528] last:border-0 text-sm flex items-center gap-2">
                                     <i class="fas fa-folder-open text-[#d4a853] text-sm"></i>
-                                    <span>{{ getTranslationText(cat.translationId) }}</span>
+                                    <span>{{ translationTexts.get(cat.translationId) }}</span>
                                 </div>
                             </div>
                             <div v-if="previewShowCatDropdown && previewAvailableCategories.length === 0" class="searchable-select-dropdown w-full rounded-lg mt-1 px-4 py-2.5 text-[#6b635a] text-sm">
@@ -1571,7 +1571,7 @@
                                 v-show="row.visible"
                                 class="card rounded-xl p-5 animate-fade">
                                 <label class="block text-sm font-medium text-amber-50 mb-1.5">
-                                    {{ getTranslationText(row.field.translationId) }}
+                                    {{ translationTexts.get(row.field.translationId) }}
                                     <span v-if="row.required" class="text-[#c44536] ml-1">*</span>
                                 </label>
 
@@ -1621,7 +1621,7 @@
                                                     class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-[#2e2820] transition text-sm">
                                                     <input :checked="isPreviewOptionSelected(row.field.id, opt.value)"
                                                         type="checkbox" class="accent-[#d4a853] pointer-events-none">
-                                                    <span>{{ getTranslationText(opt.labelTranslationId) }}</span>
+                                                    <span>{{ translationTexts.get(opt.labelTranslationId) }}</span>
                                                 </div>
                                             </template>
                                             <template v-else>
@@ -1637,7 +1637,7 @@
                                             <option value="" disabled>{{ getPlaceholderText(row.field) || 'Bitte wählen' }}</option>
                                             <template v-if="row.options.length">
                                                 <option v-for="opt in row.options" :key="opt.id" :value="opt.value">
-                                                    {{ getTranslationText(opt.labelTranslationId) }}
+                                                    {{ translationTexts.get(opt.labelTranslationId) }}
                                                 </option>
                                             </template>
                                         </select>
@@ -1651,7 +1651,7 @@
                                             :checked="previewFormValues[row.field.id] ?? row.field.config?.defaultValue ?? false"
                                             @change="setPreviewBoolean(row.field.id, $event.target.checked)"
                                             type="checkbox" class="accent-[#d4a853] w-5 h-5">
-                                        <span class="text-sm text-[#a89f94]">{{ getTranslationText(row.field.translationId) }}</span>
+                                        <span class="text-sm text-[#a89f94]">{{ translationTexts.get(row.field.translationId) }}</span>
                                     </label>
                                 </template>
 
@@ -2613,6 +2613,87 @@
                     }
                     for (const key of Object.keys(map)) {
                         map[key].sort((a, b) => a.order - b.order);
+                    }
+                    return map;
+                });
+
+                // ─── PRECOMPUTED MAPS ───
+                const translationTexts = computed(() => {
+                    const map = new Map();
+                    for (const t of translations.value) {
+                        map.set(t.id, t.translation?.de || 'Unknown');
+                    }
+                    return map;
+                });
+
+                const translationValues = computed(() => {
+                    const map = new Map();
+                    for (const t of translations.value) {
+                        map.set(t.id, t.translation || {});
+                    }
+                    return map;
+                });
+
+                const missingLangs = computed(() => {
+                    const map = new Map();
+                    for (const t of translations.value) {
+                        const missing = languages.value.filter(l => !(t.translation[l] || '').trim());
+                        map.set(t.id, missing.length ? missing : null);
+                    }
+                    return map;
+                });
+
+                const fieldWarnings = computed(() => {
+                    const map = new Map();
+                    for (const f of fields.value) {
+                        if (hasMissingTranslation(f.translationId)) {
+                            map.set(f.id, 'missing');
+                        } else {
+                            const hasChildMissing = getFieldOptionsList(f.id).some(
+                                o => hasMissingTranslation(o.labelTranslationId)
+                            );
+                            map.set(f.id, hasChildMissing ? 'children-missing' : null);
+                        }
+                    }
+                    return map;
+                });
+
+                const optionWarnings = computed(() => {
+                    const map = new Map();
+                    for (const o of fieldOptions.value) {
+                        map.set(o.id, hasMissingTranslation(o.labelTranslationId) ? 'missing' : null);
+                    }
+                    return map;
+                });
+
+                const categoryWarnings = computed(() => {
+                    const map = new Map();
+                    for (const c of categories.value) {
+                        if (hasMissingTranslation(c.translationId)) {
+                            map.set(c.id, 'missing');
+                        } else {
+                            const allIds = new Set([c.id, ...getAllDescendants(c.id).map(d => d.id)]);
+                            const allFieldIds = new Set(
+                                fieldCategories.value.filter(fc => allIds.has(fc.categoryId)).map(fc => fc.fieldId)
+                            );
+                            const anyChildMissing = [...allIds].some(cId => {
+                                const cat = categories.value.find(x => x.id === cId);
+                                return cat && hasMissingTranslation(cat.translationId);
+                            }) || fields.value.filter(f => allFieldIds.has(f.id)).some(f =>
+                                hasMissingTranslation(f.translationId) ||
+                                getFieldOptionsList(f.id).some(o => hasMissingTranslation(o.labelTranslationId))
+                            );
+                            map.set(c.id, anyChildMissing ? 'children-missing' : null);
+                        }
+                    }
+                    return map;
+                });
+
+                const fieldOptionDeps = computed(() => {
+                    const map = new Map();
+                    for (const d of fieldOptionDependencies.value) {
+                        if (!map.has(d.fieldId)) map.set(d.fieldId, []);
+                        map.get(d.fieldId).push(d);
                     }
                     return map;
                 });
@@ -4423,6 +4504,9 @@
                     filteredCatTranslations, filteredCatParents, filteredFieldNameTrans, filteredFieldPlaceholderTrans,
                     filteredLanguages, filteredDepFields,
                     translationMap, optionsByField,
+                    translationTexts, translationValues, missingLangs,
+                    fieldWarnings, categoryWarnings, optionWarnings,
+                    fieldOptionDeps,
                     newFieldType, newFieldRequired, newFieldConfig, newFieldConfigFields,
                     showCategoryModal, editingCategory, catTransMode, catTransNew, catTransSearch, catSelectedTransId,
                     catShowTransDropdown, catParentSearch, catSelectedParentId, catShowParentDropdown, catMetadata,

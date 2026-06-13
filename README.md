@@ -644,6 +644,9 @@ The app includes optimizations for handling large datasets:
 
 - Translation lookups use a pre-built `Map<id, translation>` (O(1)) instead of scanning the translations array (O(n)).
 - Field options are grouped by `fieldId` in a computed property that only recalculates when options change, not on every render.
+- Warning states (missing translations for categories, fields, and options) are precomputed in maps that only recompute when their source data changes, not on every keystroke — `categoryWarnings` was previously the most expensive operation, recursively traversing the tree per node per render.
+- Field and option dependency lookups use precomputed `Map` lookups instead of inline `filter()` calls in the template.
+- The expanded field panel accesses `field.requiredCondition` and `field.multiSelectCondition` directly instead of calling validation functions that scanned `fieldOptions` on every call.
 - Option headers use `v-memo` to skip re-rendering when the slug, translation id, and order haven't changed.
 - SortableJS is not initialized on option lists with more than 50 items to avoid expensive DOM scans.
 - The full option list collapses to a simple count when the option editing modal is open, keeping keystrokes fast even with thousands of options.
