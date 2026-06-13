@@ -447,6 +447,10 @@
                                             {{ getRequiredBadgeLabel(field) }}
                                         </span>
                                         <span class="text-xs px-2 py-0.5 rounded bg-[#242118] text-[#6b635a] uppercase tracking-wider">{{ field.type }}</span>
+                                        <span v-if="field.type === 'select'" class="text-xs px-2 py-0.5 rounded-full border"
+                                            :class="getMultiSelectBadgeClass(field)">
+                                            {{ getMultiSelectBadgeLabel(field) }}
+                                        </span>
                                         <i v-if="getVisibleFieldDependency(field.id)"
                                             class="fas fa-link text-[#d4a853] text-s"
                                             :title="'Abhängig von: ' + getDependencySourceName(getDependencySourceFieldId(getVisibleFieldDependency(field.id)))">
@@ -524,23 +528,25 @@
                                         <div v-if="fieldConfigFields(field).length > 0">
                                             <label class="block text-sm text-[#a89f94] mb-1.5">Konfiguration</label>
                                             <div class="grid grid-cols-2 gap-3">
-                                                <div v-for="cfg in fieldConfigFields(field)" :key="cfg.key" class="flex items-center gap-2">
-                                                    <span class="text-s text-[#6b635a] w-30">{{ cfg.label }}</span>
-                                                    <input v-if="cfg.type === 'number'"
-                                                        :value="field.config?.[cfg.key] ?? ''"
-                                                        @input="updateFieldConfig(field, cfg.key, Number($event.target.value) || '')"
-                                                        type="number" :step="cfg.step || 'any'"
-                                                        class="input-field flex-1 px-2 py-1 rounded text-sm">
-                                                    <input v-else-if="cfg.type === 'checkbox'"
-                                                        :key="'cfg-' + field.id + '-' + cfg.key + '-' + (field.config?.[cfg.key] ?? false)"
-                                                        :checked="field.config?.[cfg.key] ?? false"
-                                                        @change="updateFieldConfig(field, cfg.key, $event.target.checked)"
-                                                        type="checkbox" class="accent-[#d4a853]">
-                                                    <input v-else
-                                                        :value="field.config?.[cfg.key] ?? ''"
-                                                        @input="updateFieldConfig(field, cfg.key, $event.target.value)"
-                                                        class="input-field flex-1 px-2 py-1 rounded text-sm">
-                                                </div>
+                                                <template v-for="cfg in fieldConfigFields(field)" :key="cfg.key">
+                                                    <div v-if="!(field.type === 'select' && cfg.key === 'multiple')" class="flex items-center gap-2">
+                                                        <span class="text-s text-[#6b635a] w-30">{{ cfg.label }}</span>
+                                                        <input v-if="cfg.type === 'number'"
+                                                            :value="field.config?.[cfg.key] ?? ''"
+                                                            @input="updateFieldConfig(field, cfg.key, Number($event.target.value) || '')"
+                                                            type="number" :step="cfg.step || 'any'"
+                                                            class="input-field flex-1 px-2 py-1 rounded text-sm">
+                                                        <input v-else-if="cfg.type === 'checkbox'"
+                                                            :key="'cfg-' + field.id + '-' + cfg.key + '-' + (field.config?.[cfg.key] ?? false)"
+                                                            :checked="field.config?.[cfg.key] ?? false"
+                                                            @change="updateFieldConfig(field, cfg.key, $event.target.checked)"
+                                                            type="checkbox" class="accent-[#d4a853]">
+                                                        <input v-else
+                                                            :value="field.config?.[cfg.key] ?? ''"
+                                                            @input="updateFieldConfig(field, cfg.key, $event.target.value)"
+                                                            class="input-field flex-1 px-2 py-1 rounded text-sm">
+                                                    </div>
+                                                </template>
                                             </div>
                                         </div>
 
@@ -572,6 +578,39 @@
                                                 <button @click="openRequiredConditionModal(field)"
                                                     class="text-sm text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
                                                     <i class="fas fa-plus-circle mr-1"></i>{{ getRequiredCondition(field.id) ? 'Ändern' : 'Bedingung' }}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Multi-Select Condition (only for select fields) -->
+                                        <div v-if="field.type === 'select'" class="bg-[#242118] border border-[#3d3528] rounded-lg px-3 py-2">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <label class="block text-sm text-[#a89f94] mb-1">Mehrfachauswahl</label>
+                                                    <div class="flex items-center gap-2 text-sm text-[#a89f94]">
+                                                        <input :key="'ms-' + field.id + '-' + (field.config?.multiple ?? false)"
+                                                            :checked="field.config?.multiple ?? false"
+                                                            @change="updateFieldConfig(field, 'multiple', $event.target.checked)"
+                                                            type="checkbox" class="accent-[#d4a853]">
+                                                        <span>Standard: <strong class="text-amber-50">{{ (field.config?.multiple ?? false) ? 'Mehrfachauswahl' : 'Einfachauswahl' }}</strong></span>
+                                                    </div>
+                                                    <div v-if="getMultiSelectCondition(field.id)"
+                                                        class="flex items-center gap-2 text-sm text-[#a89f94] mt-2">
+                                                        <i class="fas fa-random text-[#6b635a]"></i>
+                                                        <span>Bedingt: <strong class="text-amber-50">{{ getMultiSelectConditionSummary(field.id).join(', ') }}</strong>
+                                                            · erfüllt: <strong class="text-amber-50">{{ multiSelectValueLabel(getMultiSelectCondition(field.id).multiSelectWhenMet) }}</strong>
+                                                            · sonst: <strong class="text-amber-50">{{ multiSelectValueLabel(getMultiSelectCondition(field.id).multiSelectWhenNotMet) }}</strong>
+                                                        </span>
+                                                        <button @click="removeMultiSelectCondition(field.id)"
+                                                            class="text-[#c44536] hover:text-[#d9584a] ml-1">
+                                                            <i class="fas fa-times-circle"></i>
+                                                        </button>
+                                                    </div>
+                                                    <div v-else class="text-sm text-[#6b635a] mt-1">Keine Mehrfachauswahl-Bedingung</div>
+                                                </div>
+                                                <button @click="openMultiSelectConditionModal(field)"
+                                                    class="text-sm text-[#d4a853] hover:text-[#e8c278] transition shrink-0">
+                                                    <i class="fas fa-plus-circle mr-1"></i>{{ getMultiSelectCondition(field.id) ? 'Ändern' : 'Bedingung' }}
                                                 </button>
                                             </div>
                                         </div>
@@ -1191,11 +1230,6 @@
                             <input v-model="requiredConditionSearch" type="text" placeholder="Option suchen..."
                                 class="input-field w-full px-4 py-2 rounded-lg text-sm">
                         </div>
-                        <button v-if="getFieldOptionDeps(requiredConditionFieldId).length > 0"
-                            @click="copyFieldOptionDepsToRequiredCondition(requiredConditionFieldId)"
-                            class="btn-ghost px-3 py-2 rounded-lg text-sm shrink-0">
-                            <i class="fas fa-check-circle mr-1"></i>Übernehmen
-                        </button>
                     </div>
                     <div v-if="requiredConditionGroupedOptions.length === 0" class="text-center text-[#6b635a] py-8 text-sm">
                         Keine Select-Felder mit Optionen in dieser Kategorie
@@ -1219,6 +1253,79 @@
                 </div>
                 <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end">
                     <button @click="closeRequiredConditionModal" class="btn-primary px-5 py-2.5 rounded-lg">Fertig</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Multi-Select Condition Modal -->
+        <div v-if="showMultiSelectConditionModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between">
+                    <h2 class="modal-title text-2xl">Mehrfachauswahl-Bedingung</h2>
+                    <button @click="closeMultiSelectConditionModal" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5">
+                    <div class="mb-4">
+                        <p class="text-sm text-[#a89f94] mb-3">Feld: <strong class="text-amber-50">{{ multiSelectConditionFieldLabel }}</strong></p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="bg-[#242118] border border-[#3d3528] rounded-lg p-3">
+                                <label class="block text-xs text-[#6b635a] mb-2">Wenn Bedingung erfüllt ist</label>
+                                <div class="flex rounded-lg overflow-hidden border border-[#3d3528]">
+                                    <button @click="setMultiSelectConditionValue(multiSelectConditionFieldId, 'multiSelectWhenMet', true)"
+                                        :class="['flex-1 px-3 py-1.5 text-sm transition', getMultiSelectConditionValue(multiSelectConditionFieldId, 'multiSelectWhenMet') ? 'btn-primary' : 'toggle-btn']">
+                                        Mehrfach
+                                    </button>
+                                    <button @click="setMultiSelectConditionValue(multiSelectConditionFieldId, 'multiSelectWhenMet', false)"
+                                        :class="['flex-1 px-3 py-1.5 text-sm transition', !getMultiSelectConditionValue(multiSelectConditionFieldId, 'multiSelectWhenMet') ? 'btn-primary' : 'toggle-btn']">
+                                    Einfach
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="bg-[#242118] border border-[#3d3528] rounded-lg p-3">
+                                <label class="block text-xs text-[#6b635a] mb-2">Wenn Bedingung nicht erfüllt ist</label>
+                                <div class="flex rounded-lg overflow-hidden border border-[#3d3528]">
+                                    <button @click="setMultiSelectConditionValue(multiSelectConditionFieldId, 'multiSelectWhenNotMet', true)"
+                                        :class="['flex-1 px-3 py-1.5 text-sm transition', getMultiSelectConditionValue(multiSelectConditionFieldId, 'multiSelectWhenNotMet') ? 'btn-primary' : 'toggle-btn']">
+                                        Mehrfach
+                                    </button>
+                                    <button @click="setMultiSelectConditionValue(multiSelectConditionFieldId, 'multiSelectWhenNotMet', false)"
+                                        :class="['flex-1 px-3 py-1.5 text-sm transition', !getMultiSelectConditionValue(multiSelectConditionFieldId, 'multiSelectWhenNotMet') ? 'btn-primary' : 'toggle-btn']">
+                                    Einfach
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="relative flex-1">
+                            <input v-model="multiSelectConditionSearch" type="text" placeholder="Option suchen..."
+                                class="input-field w-full px-4 py-2 rounded-lg text-sm">
+                        </div>
+                    </div>
+                    <div v-if="multiSelectConditionGroupedOptions.length === 0" class="text-center text-[#6b635a] py-8 text-sm">
+                        Keine Select-Felder mit Optionen in dieser Kategorie
+                    </div>
+                    <div v-for="group in multiSelectConditionGroupedOptions" :key="'msc-g-' + group.fieldId"
+                        class="mb-4 bg-[#242118] border border-[#3d3528] rounded-lg overflow-hidden">
+                        <div class="px-4 py-2 border-b border-[#3d3528] text-sm text-[#a89f94] font-medium">
+                            {{ group.fieldName }}
+                        </div>
+                        <div class="p-2 space-y-0.5">
+                            <div v-for="opt in group.options" :key="'msc-' + opt.id"
+                                @click="toggleMultiSelectConditionOption(opt.id)"
+                                class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-[#2e2820] transition">
+                                <input :checked="opt.checked" type="checkbox"
+                                    class="accent-[#d4a853] pointer-events-none">
+                                <span class="text-sm text-amber-50">{{ opt.label }}</span>
+                                <span class="text-[10px] text-[#6b635a] font-mono">({{ opt.value }})</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end">
+                    <button @click="closeMultiSelectConditionModal" class="btn-primary px-5 py-2.5 rounded-lg">Fertig</button>
                 </div>
             </div>
         </div>
@@ -1506,7 +1613,7 @@
                                 </template>
 
                                 <template v-else-if="row.field.type === 'select'">
-                                    <div v-if="row.field.config?.multiple">
+                                    <div v-if="getEffectiveMultiSelect(row.field)">
                                         <div class="space-y-1.5 max-h-48 overflow-y-auto border border-[#3d3528] rounded-lg p-2">
                                             <template v-if="row.options.length">
                                                 <div v-for="opt in row.options" :key="opt.id"
@@ -1524,7 +1631,8 @@
                                     </div>
                                     <div v-else class="relative">
                                         <select :key="'pv-sel-' + row.field.id"
-                                            v-model="previewFormValues[row.field.id]"
+                                            :value="normalizePreviewSingleSelect(row.field.id)"
+                                            @change="previewFormValues = { ...previewFormValues, [row.field.id]: $event.target.value }"
                                             class="input-field w-full px-4 py-2.5 rounded-lg text-sm appearance-none">
                                             <option value="" disabled>{{ getPlaceholderText(row.field) || 'Bitte wählen' }}</option>
                                             <template v-if="row.options.length">
@@ -1897,6 +2005,45 @@
                 const requiredConditionFieldLabel = ref('');
                 const requiredConditionSearch = ref('');
 
+                // ─── MULTI-SELECT CONDITION PICKER STATE ───
+                const showMultiSelectConditionModal = ref(false);
+                const multiSelectConditionFieldId = ref(null);
+                const multiSelectConditionFieldLabel = ref('');
+                const multiSelectConditionSearch = ref('');
+
+                const multiSelectConditionGroupedOptions = computed(() => {
+                    if (!multiSelectConditionFieldId.value || !selectedCategoryId.value) return [];
+                    const catFieldIds = new Set(getFieldIdsForCategory(selectedCategoryId.value));
+                    const selectFields = fields.value.filter(f => catFieldIds.has(f.id) && f.type === 'select' && f.id !== multiSelectConditionFieldId.value);
+                    const selectedIds = new Set(getMultiSelectConditionOptionIds(multiSelectConditionFieldId.value));
+                    const result = [];
+
+                    for (const field of selectFields) {
+                        const options = getFieldOptionsList(field.id);
+                        const items = options.map(o => ({
+                            id: o.id,
+                            label: getTranslationText(o.labelTranslationId),
+                            value: o.value,
+                            checked: selectedIds.has(o.id)
+                        }));
+                        result.push({
+                            fieldId: field.id,
+                            fieldName: getTranslationText(field.translationId),
+                            options: items
+                        });
+                    }
+
+                    if (multiSelectConditionSearch.value) {
+                        const q = multiSelectConditionSearch.value.toLowerCase();
+                        return result.map(g => ({
+                            ...g,
+                            options: g.options.filter(o => o.label.toLowerCase().includes(q))
+                        })).filter(g => g.options.length > 0);
+                    }
+
+                    return result;
+                });
+
                 const requiredConditionGroupedOptions = computed(() => {
                     if (!requiredConditionFieldId.value || !selectedCategoryId.value) return [];
                     const catFieldIds = new Set(getFieldIdsForCategory(selectedCategoryId.value));
@@ -1999,12 +2146,6 @@
                     condition.optionIds = [...selectedIds];
                 }
 
-                function copyFieldOptionDepsToRequiredCondition(fieldId) {
-                    const condition = ensureRequiredCondition(fieldId);
-                    if (!condition) return;
-                    condition.optionIds = [...new Set(getFieldOptionDeps(fieldId).map(d => d.optionId))];
-                }
-
                 function setRequiredConditionValue(fieldId, key, value) {
                     const condition = ensureRequiredCondition(fieldId);
                     if (!condition) return;
@@ -2019,6 +2160,124 @@
                 function removeRequiredCondition(fieldId) {
                     const field = fields.value.find(f => f.id === fieldId);
                     if (field?.requiredCondition) delete field.requiredCondition;
+                }
+
+                // ─── MULTI-SELECT CONDITION FUNCTIONS ───
+
+                function getMultiSelectConditionOptionIds(fieldId) {
+                    const field = fields.value.find(f => f.id === fieldId);
+                    const condition = field?.multiSelectCondition;
+                    if (!condition) return [];
+
+                    const rawIds = Array.isArray(condition.optionIds)
+                        ? condition.optionIds
+                        : (condition.optionId != null ? [condition.optionId] : []);
+
+                    const validIds = rawIds
+                        .map(id => Number(id))
+                        .filter(id => fieldOptions.value.some(o => o.id === id));
+                    return [...new Set(validIds)];
+                }
+
+                function getMultiSelectCondition(fieldId) {
+                    const field = fields.value.find(f => f.id === fieldId);
+                    if (!field?.multiSelectCondition) return null;
+                    return getMultiSelectConditionOptionIds(fieldId).length > 0 ? field.multiSelectCondition : null;
+                }
+
+                function ensureMultiSelectCondition(fieldId) {
+                    const field = fields.value.find(f => f.id === fieldId);
+                    if (!field) return null;
+
+                    if (!field.multiSelectCondition) {
+                        field.multiSelectCondition = {
+                            optionIds: [],
+                            multiSelectWhenMet: true,
+                            multiSelectWhenNotMet: false
+                        };
+                    } else {
+                        field.multiSelectCondition.optionIds = getMultiSelectConditionOptionIds(fieldId);
+                        if (field.multiSelectCondition.multiSelectWhenMet === undefined) {
+                            field.multiSelectCondition.multiSelectWhenMet = true;
+                        }
+                        if (field.multiSelectCondition.multiSelectWhenNotMet === undefined) {
+                            field.multiSelectCondition.multiSelectWhenNotMet = !!field.config?.multiple;
+                        }
+                    }
+
+                    return field.multiSelectCondition;
+                }
+
+                function openMultiSelectConditionModal(field) {
+                    multiSelectConditionFieldId.value = field.id;
+                    multiSelectConditionFieldLabel.value = getTranslationText(field.translationId);
+                    multiSelectConditionSearch.value = '';
+                    ensureMultiSelectCondition(field.id);
+                    showMultiSelectConditionModal.value = true;
+                }
+
+                function closeMultiSelectConditionModal() {
+                    const field = fields.value.find(f => f.id === multiSelectConditionFieldId.value);
+                    normalizeFieldMultiSelectCondition(field);
+                    showMultiSelectConditionModal.value = false;
+                    multiSelectConditionFieldId.value = null;
+                }
+
+                function toggleMultiSelectConditionOption(optionId) {
+                    const condition = ensureMultiSelectCondition(multiSelectConditionFieldId.value);
+                    if (!condition) return;
+
+                    const selectedIds = new Set(getMultiSelectConditionOptionIds(multiSelectConditionFieldId.value));
+                    if (selectedIds.has(optionId)) selectedIds.delete(optionId);
+                    else selectedIds.add(optionId);
+                    condition.optionIds = [...selectedIds];
+                }
+
+                function setMultiSelectConditionValue(fieldId, key, value) {
+                    const condition = ensureMultiSelectCondition(fieldId);
+                    if (!condition) return;
+                    condition[key] = !!value;
+                }
+
+                function getMultiSelectConditionValue(fieldId, key) {
+                    const field = fields.value.find(f => f.id === fieldId);
+                    return !!field?.multiSelectCondition?.[key];
+                }
+
+                function removeMultiSelectCondition(fieldId) {
+                    const field = fields.value.find(f => f.id === fieldId);
+                    if (field?.multiSelectCondition) delete field.multiSelectCondition;
+                }
+
+                function getMultiSelectConditionSummary(fieldId) {
+                    return getMultiSelectConditionOptionIds(fieldId).map(optionId => {
+                        const opt = fieldOptions.value.find(o => o.id === optionId);
+                        return opt ? getTranslationText(opt.labelTranslationId) : '?';
+                    });
+                }
+
+                function multiSelectValueLabel(value) {
+                    return value ? 'Mehrfach' : 'Einfach';
+                }
+
+                function getMultiSelectBadgeLabel(field) {
+                    const condition = getMultiSelectCondition(field.id);
+                    if (!condition) return (field.config?.multiple ?? false) ? 'Mehrfach' : 'Einfach';
+                    const whenMet = !!condition.multiSelectWhenMet;
+                    const whenNotMet = !!condition.multiSelectWhenNotMet;
+                    if (whenMet !== whenNotMet) return 'Mehrfach / Einfach';
+                    return whenMet ? 'Mehrfach' : 'Einfach';
+                }
+
+                function getMultiSelectBadgeClass(field) {
+                    const condition = getMultiSelectCondition(field.id);
+                    if (condition && !!condition.multiSelectWhenMet !== !!condition.multiSelectWhenNotMet) {
+                        return 'bg-[#242118] text-[#d4a853] border-[#d4a853]';
+                    }
+                    if (condition ? condition.multiSelectWhenMet : (field.config?.multiple ?? false)) {
+                        return 'bg-[#1a3a5c] text-[#8bb8f0] border-transparent';
+                    }
+                    return 'bg-[#2e2820] text-[#6b635a] border-transparent';
                 }
 
                 function getRequiredConditionSummary(fieldId) {
@@ -2519,6 +2778,31 @@
                     fields.value.forEach(field => normalizeFieldRequiredCondition(field));
                 }
 
+                function normalizeFieldMultiSelectCondition(field) {
+                    if (!field?.multiSelectCondition) return null;
+
+                    const optionIds = getMultiSelectConditionOptionIds(field.id);
+                    if (optionIds.length === 0) {
+                        delete field.multiSelectCondition;
+                        return null;
+                    }
+
+                    field.multiSelectCondition = {
+                        optionIds,
+                        multiSelectWhenMet: field.multiSelectCondition.multiSelectWhenMet !== undefined
+                            ? !!field.multiSelectCondition.multiSelectWhenMet
+                            : true,
+                        multiSelectWhenNotMet: field.multiSelectCondition.multiSelectWhenNotMet !== undefined
+                            ? !!field.multiSelectCondition.multiSelectWhenNotMet
+                            : !!(field.config?.multiple)
+                    };
+                    return field.multiSelectCondition;
+                }
+
+                function normalizeFieldMultiSelectConditions() {
+                    fields.value.forEach(field => normalizeFieldMultiSelectCondition(field));
+                }
+
                 function getFieldOptionDeps(fieldId) {
                     return fieldOptionDependencies.value.filter(d => d.fieldId === fieldId);
                 }
@@ -2779,6 +3063,10 @@
                             !(getDependencySourceFieldId(d) === field.id && d.includeWhen !== undefined)
                         );
                     }
+
+                    if (oldType === 'select' && newType !== 'select') {
+                        if (field.multiSelectCondition) delete field.multiSelectCondition;
+                    }
                 }
 
                 function updateFieldConfig(field, key, value) {
@@ -2859,6 +3147,7 @@
                             optionDependencies.value = normalizeOptionDependencies(data['optionDependencies.json']);
                             fieldOptionDependencies.value = normalizeFieldOptionDependencies(data['fieldOptionDependencies.json']);
                             normalizeFieldRequiredConditions();
+                            normalizeFieldMultiSelectConditions();
                             translations.value = data['translations.json'];
 
                             const langs = new Set();
@@ -2889,6 +3178,7 @@
                     optionDependencies.value = normalizeOptionDependencies();
                     fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                     normalizeFieldRequiredConditions();
+                    normalizeFieldMultiSelectConditions();
                     const zip = new JSZip();
                     zip.file('project.json', JSON.stringify({ name: projectName.value }, null, 2));
                     zip.file('categories.json', JSON.stringify(categories.value, null, 2));
@@ -3124,6 +3414,7 @@
                                         !optIdSet.has(d.optionId)
                                     );
                                     normalizeFieldRequiredConditions();
+                                    normalizeFieldMultiSelectConditions();
                                 }
 
                                 if (wasBoolean && newFieldType.value !== 'boolean') {
@@ -3493,6 +3784,7 @@
                             );
                             fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                             normalizeFieldRequiredConditions();
+                            normalizeFieldMultiSelectConditions();
                             cleanupOrphanedTranslations();
                             if (selectedCategoryId.value && deleteCatIds.has(selectedCategoryId.value)) {
                                 selectedCategoryId.value = null;
@@ -3516,6 +3808,7 @@
                             );
                             fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                             normalizeFieldRequiredConditions();
+                            normalizeFieldMultiSelectConditions();
                             if (selectedCategoryId.value && deleteCatIds.has(selectedCategoryId.value)) {
                                 selectedCategoryId.value = null;
                             }
@@ -3557,6 +3850,7 @@
                                 optionDependencies.value = normalizeOptionDependencies();
                                 fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                                 normalizeFieldRequiredConditions();
+                                normalizeFieldMultiSelectConditions();
                                 cleanupOrphanedTranslations();
                             };
                         }
@@ -3574,8 +3868,10 @@
                             fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d => d.fieldId !== item.id && !fOptIds.has(d.optionId));
                             fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                             normalizeFieldRequiredConditions();
+                            normalizeFieldMultiSelectConditions();
                             cleanupOrphanedTranslations();
                         };
+
                     } else if (type === 'option') {
                         const oOptDeps = optionDependencies.value.filter(d => d.optionId === item.id || d.visibleOptionId === item.id);
                         const oFieldOptDeps = fieldOptionDependencies.value.filter(d => d.optionId === item.id);
@@ -3590,6 +3886,7 @@
                             fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d => d.optionId !== item.id);
                             fieldOptionDependencies.value = normalizeFieldOptionDependencies();
                             normalizeFieldRequiredConditions();
+                            normalizeFieldMultiSelectConditions();
                             cleanupOrphanedTranslations();
                         };
                     }
@@ -3747,7 +4044,7 @@
                     for (const field of previewFields.value) {
                         if (field.type === 'boolean') {
                             vals[field.id] = field.config?.defaultValue ?? false;
-                        } else if (field.type === 'select' && field.config?.multiple) {
+                        } else if (field.type === 'select' && getEffectiveMultiSelect(field, {})) {
                             vals[field.id] = [];
                         } else {
                             vals[field.id] = '';
@@ -3849,20 +4146,28 @@
                 }
 
                 function togglePreviewSelectOption(fieldId, value) {
-                    const current = previewFormValues.value[fieldId] || [];
-                    if (Array.isArray(current)) {
-                        const idx = current.indexOf(value);
-                        if (idx >= 0) {
-                            previewFormValues.value = { ...previewFormValues.value, [fieldId]: current.filter(v => v !== value) };
-                        } else {
-                            previewFormValues.value = { ...previewFormValues.value, [fieldId]: [...current, value] };
-                        }
+                    let current = previewFormValues.value[fieldId];
+                    if (!Array.isArray(current)) {
+                        current = current ? [current] : [];
+                    }
+                    const idx = current.indexOf(value);
+                    if (idx >= 0) {
+                        previewFormValues.value = { ...previewFormValues.value, [fieldId]: current.filter(v => v !== value) };
+                    } else {
+                        previewFormValues.value = { ...previewFormValues.value, [fieldId]: [...current, value] };
                     }
                 }
 
                 function isPreviewOptionSelected(fieldId, value) {
                     const current = previewFormValues.value[fieldId];
-                    return Array.isArray(current) && current.includes(value);
+                    if (Array.isArray(current)) return current.includes(value);
+                    return current === value;
+                }
+
+                function normalizePreviewSingleSelect(fieldId) {
+                    const val = previewFormValues.value[fieldId];
+                    if (Array.isArray(val)) return val[0] ?? '';
+                    return val ?? '';
                 }
 
                 function setPreviewBoolean(fieldId, value) {
@@ -3948,6 +4253,22 @@
                         : !!condition.requiredWhenNotMet;
                 }
 
+                function isMultiSelectConditionMet(fieldId, formVals = previewFormValues.value || {}) {
+                    const conditionOptionIds = new Set(getMultiSelectConditionOptionIds(fieldId));
+                    if (conditionOptionIds.size === 0) return false;
+
+                    const selectedOptionIds = getPreviewSelectedOptionIds(formVals);
+                    return [...conditionOptionIds].some(optionId => selectedOptionIds.has(optionId));
+                }
+
+                function getEffectiveMultiSelect(field, formVals = previewFormValues.value || {}) {
+                    const condition = getMultiSelectCondition(field.id);
+                    if (!condition) return !!(field.config?.multiple ?? false);
+                    return isMultiSelectConditionMet(field.id, formVals)
+                        ? !!condition.multiSelectWhenMet
+                        : !!condition.multiSelectWhenNotMet;
+                }
+
                 const previewAllRequiredFilled = computed(() => {
                     try {
                         for (const row of previewFieldRows.value) {
@@ -3955,7 +4276,7 @@
                             const field = row.field;
                             const val = previewFormValues.value[field.id];
                             if (field.type === 'boolean') continue;
-                            if (field.type === 'select' && field.config?.multiple) {
+                            if (field.type === 'select' && getEffectiveMultiSelect(field, previewFormValues.value || {})) {
                                 if (!Array.isArray(val) || val.length === 0) return false;
                                 continue;
                             }
@@ -4120,15 +4441,22 @@
                     getTranslation, getTranslationText, getTranslationValue, updateTranslation, getChildCount,
                     getFieldOptionsList, getFieldDependency, getVisibleFieldDependency, getDependencySourceFieldId, getDependencySourceName,
                     getOptionDepsForOption, getOptionFilterDisplay,
-                    fieldOptionDependencies, getFieldOptionDeps, getFieldOptionDepSummary,
+                    getFieldOptionDeps, getFieldOptionDepSummary,
                     showFieldOptionDepModal, fieldOptionDepFieldId, fieldOptionDepFieldLabel, fieldOptionDepSearch,
                     fieldOptionDepGroupedOptions, openFieldOptionDepModal, closeFieldOptionDepModal, toggleFieldOptionDep, removeFieldOptionDeps,
                     showRequiredConditionModal, requiredConditionFieldId, requiredConditionFieldLabel, requiredConditionSearch,
                     requiredConditionGroupedOptions, openRequiredConditionModal, closeRequiredConditionModal,
-                    toggleRequiredConditionOption, copyFieldOptionDepsToRequiredCondition,
+                    toggleRequiredConditionOption,
                     setRequiredConditionValue, getRequiredConditionValue, removeRequiredCondition,
                     getRequiredCondition, getRequiredConditionSummary, requiredValueLabel,
                     getRequiredBadgeLabel, getRequiredBadgeClass, isFieldRequired,
+                    showMultiSelectConditionModal, multiSelectConditionFieldId, multiSelectConditionFieldLabel, multiSelectConditionSearch,
+                    multiSelectConditionGroupedOptions, openMultiSelectConditionModal, closeMultiSelectConditionModal,
+                    toggleMultiSelectConditionOption,
+                    setMultiSelectConditionValue, getMultiSelectConditionValue, removeMultiSelectCondition,
+                    getMultiSelectCondition, getMultiSelectConditionSummary, multiSelectValueLabel,
+                    getMultiSelectBadgeLabel, getMultiSelectBadgeClass,
+                    isMultiSelectConditionMet, getEffectiveMultiSelect,
                     getBreadcrumbPathText, slugify, fieldTypeIcon, fieldConfigFields, changeFieldType, updateFieldConfig,
                     hasMissingTranslation, getMissingLanguages, getEntityWarningType,
                     selectCategory, toggleCategoryExpand, toggleFieldExpand,
@@ -4152,6 +4480,7 @@
                     selectPreviewCategory, goBackToCategory,
                     isFieldVisibleInPreview, getPreviewVisibleOptions,
                     togglePreviewSelectOption, isPreviewOptionSelected, setPreviewBoolean,
+                    normalizePreviewSingleSelect,
                     previewDateShowAll, getDateMin, getDateMax, getDatePartBound, getPlaceholderText,
                     previewAllRequiredFilled
                 };

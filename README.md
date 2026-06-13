@@ -11,6 +11,7 @@ The app is currently a single-file static application in `index.html`. It runs d
 - Supported field types: `text`, `textarea`, `number`, `select`, `boolean`, `date`, and `datetime`.
 - Field configuration per type, for example min/max values, text length limits, patterns, textarea rows, units, multi-select, date/time patterns, and visibility toggles for date segments.
 - Required/optional field handling with optional conditional-required state: field requirement can depend on which select options the end user has chosen.
+- Multi-select field handling with optional conditional-multi-select state: multi-select mode can depend on which select options the end user has chosen.
 - Localized field labels, placeholders, category names, and option labels.
 - Language management with missing-translation warnings.
 - Select field options with localized labels, stable slug values, manual or alphabetical sorting, and CSV import.
@@ -124,6 +125,11 @@ Stores reusable field definitions.
       "requiredWhenMet": true,
       "requiredWhenNotMet": false
     },
+    "multiSelectCondition": {
+      "optionIds": [3, 4],
+      "multiSelectWhenMet": true,
+      "multiSelectWhenNotMet": false
+    },
     "config": {
       "multiple": false
     }
@@ -152,6 +158,7 @@ Fields:
 - `placeholderTranslationId`: Placeholder translation id, or `null`.
 - `required`: Whether the field is required. When a `requiredCondition` is present, the effective required state depends on which select options the user has chosen.
 - `requiredCondition`: Optional object (see below) that makes the required state conditional on select options.
+- `multiSelectCondition`: Optional object (see below) that makes the multi-select state conditional on select options (select fields only).
 - `config`: Type-specific configuration object.
 
   **`date` config:**
@@ -176,6 +183,13 @@ Fields:
   - `requiredWhenNotMet` (boolean): Whether the field should be required when the condition is not met.
 
   When `requiredWhenMet` and `requiredWhenNotMet` differ, the app shows a "Pflicht / Optional" badge (mixed state). When they match, the badge reflects the single value.
+
+  **`multiSelectCondition` (optional, select fields only):**
+  - `optionIds` (number[]): Array of `fieldOptions.id` values. The condition is met when at least one of these options is currently selected by the end user.
+  - `multiSelectWhenMet` (boolean): Whether the field should allow multi-select when the condition is met.
+  - `multiSelectWhenNotMet` (boolean): Whether the field should allow multi-select when the condition is not met.
+
+  When `multiSelectWhenMet` and `multiSelectWhenNotMet` differ, the app shows a "Mehrfach / Einfach" badge (mixed state). When they match, the badge reflects the single value.
 
 ### fieldCategories.json
 
@@ -368,6 +382,12 @@ type RequiredCondition = {
   requiredWhenNotMet: boolean;
 };
 
+type MultiSelectCondition = {
+  optionIds: number[];
+  multiSelectWhenMet: boolean;
+  multiSelectWhenNotMet: boolean;
+};
+
 type Field = {
   id: number;
   translationId: number;
@@ -375,6 +395,7 @@ type Field = {
   placeholderTranslationId?: number | null;
   required: boolean;
   requiredCondition?: RequiredCondition | null;
+  multiSelectCondition?: MultiSelectCondition | null;
   config?: Record<string, unknown> | null;
 };
 
@@ -479,6 +500,15 @@ function isFieldRequired(field: Field, values: FormValues, optionLookup: (option
   const selectedOptionIds = getSelectedOptionIds(values);
   const isMet = condition.optionIds.some((id) => selectedOptionIds.has(id));
   return isMet ? condition.requiredWhenMet : condition.requiredWhenNotMet;
+}
+
+function isFieldMultiSelect(field: Field, values: FormValues): boolean {
+  if (!field.multiSelectCondition) return !!(field.config?.multiple ?? false);
+
+  const condition = field.multiSelectCondition;
+  const selectedOptionIds = getSelectedOptionIds(values);
+  const isMet = condition.optionIds.some((id) => selectedOptionIds.has(id));
+  return isMet ? condition.multiSelectWhenMet : condition.multiSelectWhenNotMet;
 }
 
 function getSelectedOptionIds(values: FormValues) {
@@ -600,6 +630,7 @@ function CategoryForm(props: {
 In this example:
 
 - The `isFieldRequired` helper evaluates `requiredCondition` against the current form values and falls back to the plain `required` boolean when no condition is present.
+- The `isFieldMultiSelect` helper evaluates `multiSelectCondition` against the current form values and falls back to the plain `config.multiple` boolean when no condition is present.
 - The selected category determines which fields are rendered.
 - `translations.json` provides the label and placeholder text for the requested locale.
 - `fieldDependencies.json` controls whether a field is visible (including boolean true/false conditions).
@@ -627,4 +658,5 @@ The app includes optimizations for handling large datasets:
 - `fieldDependencies` with `includeWhen` is used for boolean-controlled field visibility.
 - `fieldOptionDependencies` uses OR logic per field; combined with `fieldDependencies`, AND logic applies.
 - `requiredCondition` makes field requirement depend on which select options are chosen. When present, evaluate it at runtime by checking if any `optionIds` are in the current selection, then use `requiredWhenMet` or `requiredWhenNotMet` accordingly.
-- Removing a select field's type strips its options and cleans up related `optionDependencies`, `fieldOptionDependencies`, and normalizes `requiredCondition` references.
+- `multiSelectCondition` makes multi-select mode depend on which select options are chosen. Same evaluation pattern as `requiredCondition` but uses `multiSelectWhenMet` / `multiSelectWhenNotMet`.
+- Removing a select field's type strips its options and cleans up related `optionDependencies`, `fieldOptionDependencies`, and normalizes `requiredCondition`/`multiSelectCondition` references.

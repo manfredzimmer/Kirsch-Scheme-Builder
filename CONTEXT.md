@@ -68,6 +68,7 @@ Important fields:
 - `placeholderTranslationId`
 - `required`
 - `requiredCondition` — optional object (see below)
+- `multiSelectCondition` — optional object for select fields (see below)
 - `config`
 
 Supported field types are currently:
@@ -107,7 +108,7 @@ When `requiredWhenMet` and `requiredWhenNotMet` differ, the badge in the field l
 Rules:
 
 - A condition must reference at least one valid `fieldOptions` entry to be active. `normalizeFieldRequiredCondition()` deletes conditions whose `optionIds` are all stale.
-- `ensureRequiredCondition(fieldId)` auto-populates `optionIds` from existing `fieldOptionDependencies` entries when creating a new condition from scratch (the "Übernehmen" button in the modal copies them explicitly).
+- `ensureRequiredCondition(fieldId)` creates a condition with an empty `optionIds` array when called fresh.
 - `normalizeFieldRequiredConditions()` is called on import, export, field type changes (select→non-select via modal), option/filed deletions, and category deletions.
 - Old exports without `requiredCondition` load normally — the field just uses the plain `required` boolean with no condition.
 
@@ -253,6 +254,36 @@ Rules:
 - Only options from select fields in the same category are available.
 - This is combined with `fieldDependencies` using AND logic: if both a field dependency and field option dependencies exist, the field is shown only when **both** conditions are met.
 - `normalizeFieldOptionDependencies()` removes stale entries (deleted options, deleted fields, duplicates).
+
+### multiSelectCondition (optional field property, select fields only)
+
+The `multiSelectCondition` property on a `select` field makes the multi-select (`config.multiple`) state depend on which select options the end user chooses. It is stored inline on the field in `fields.json`, not in a separate ZIP file.
+
+Shape:
+
+```json
+{
+  "optionIds": [12, 15],
+  "multiSelectWhenMet": true,
+  "multiSelectWhenNotMet": false
+}
+```
+
+Meaning:
+
+- `optionIds` — array of `fieldOptions.id` values. The condition is "met" when at least one of these options is currently selected by the end user.
+- `multiSelectWhenMet` — whether the field should allow multi-select when the condition is met.
+- `multiSelectWhenNotMet` — whether the field should allow multi-select when the condition is not met.
+
+When `multiSelectWhenMet` and `multiSelectWhenNotMet` differ, the badge in the field list shows "Mehrfach / Einfach" (blue border on dark background) instead of the usual blue "Mehrfach" or muted "Einfach".
+
+Rules:
+
+- A condition must reference at least one valid `fieldOptions` entry to be active. `normalizeFieldMultiSelectCondition()` deletes conditions whose `optionIds` are all stale.
+- `ensureMultiSelectCondition(fieldId)` creates a condition with an empty `optionIds` array when called fresh.
+- `normalizeFieldMultiSelectConditions()` is called on import, export, field type changes (select→non-select via modal), option/field deletions, and category deletions.
+- Old exports without `multiSelectCondition` load normally — the field just uses the plain `config.multiple` boolean with no condition.
+- Changing a select field to a non-select type via inline type toggle removes `multiSelectCondition` immediately.
 
 ### translations
 
