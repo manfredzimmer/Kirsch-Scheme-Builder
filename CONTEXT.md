@@ -308,7 +308,7 @@ The `languages` ref is derived from translation keys during import. Use `createT
 The UI is German-language and organized as:
 
 - Left sidebar: category tree, project actions, language management.
-- Main area: selected category breadcrumb, category summary, field list.
+- Main area: selected category breadcrumb, category summary, field list. Each field header shows its type icon, name (with missing-translation warnings), required badge, multi-select badge (for select fields), field type label, and a share-alt icon when the field is shared across multiple categories.
 - Expanded field panel: field translations, placeholder translations, type/config, required toggle (with optional conditional-required editor), field dependency, boolean control (Steuerung), select options.
 - Select options: inline option editing, CSV import, plus option filtering.
 - Modals: category, field, option, dependency picker, option filter, delete confirmation, translation picker, language management, copy field, preview, required condition.
@@ -390,6 +390,7 @@ The following optimizations keep the UI responsive with thousands of field optio
   - `missingLangs` — `Map<id, missing language array | null>` replaces `getMissingLanguages()` (which filtered `languages` per call).
   - `fieldWarnings` / `categoryWarnings` / `optionWarnings` — Precomputed warning states replace `getEntityWarningType()`. The category variant was the most expensive: it recursively traversed the category tree and scanned field options for every tree node on every render. These maps only recompute when `fields`, `categories`, or `fieldOptions` change — not when the user types text.
   - `fieldOptionDeps` — `Map<fieldId, dep array>` replaces inline `filter()` calls in the template.
+  - `fieldRefCounts` — `Map<fieldId, count>` built from `fieldCategories` to determine whether a field is shared across categories. Used in the template to show/hide the reference indicator icon (`fas fa-share-alt`).
 - **`v-memo` on option header div** — The option header (translation text, slug, edit/delete buttons) is memoized against `[opt.value, opt.labelTranslationId, opt.order]`. Vue skips the entire subtree when none of those values changed, avoiding expensive `getTranslationText()` and `getEntityWarningType()` calls per option per render.
 - **Direct field property access** — The expanded panel uses `field.requiredCondition` / `field.multiSelectCondition` directly instead of calling `getRequiredCondition(field.id)` / `getMultiSelectCondition(field.id)` (which validated option IDs against `fieldOptions` on every call).
 - **Guarded `onUpdated`** — `reinitSortable()` only fires when the length of `categories`, `fields`, `fieldOptions`, or `fieldCategories` changes, not on every Vue update (which previously re-initialized SortableJS on 900+ DOM nodes for unrelated state changes).

@@ -20,6 +20,7 @@ The app is currently a single-file static application in `index.html`. It runs d
 - Option filters: restrict options in one select field based on a selected option in another select field.
 - Field option dependencies: show a field when specific select options are chosen (configurable via searchable multi-select modal).
 - Drag-and-drop sorting for categories, fields, and options.
+- Visual indicator (share-alt icon) on fields that are reference-copied into multiple categories.
 - Editable project name with inline rename.
 - Live form preview: test field behavior, dependencies, and option filters in a modal wizard with category breadcrumb navigation (clickable segments to go back up the tree).
 - Field copy workflows:

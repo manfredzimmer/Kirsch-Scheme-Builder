@@ -437,11 +437,15 @@
                                                 class="fas fa-exclamation-triangle text-[#c44536] text-xs"
                                                 :title="'Fehlende Übersetzungen: ' + (missingLangs.get(field.translationId) || []).join(', ')">
                                             </i>
-                                            <i v-else-if="fieldWarnings.get(field.id) === 'children-missing'"
-                                                class="fas fa-exclamation-triangle text-[#d4a853] text-xs"
-                                                title="Optionen haben fehlende Übersetzungen">
-                                            </i>
-                                        </span>
+                                        <i v-else-if="fieldWarnings.get(field.id) === 'children-missing'"
+                                            class="fas fa-exclamation-triangle text-[#d4a853] text-xs"
+                                            title="Optionen haben fehlende Übersetzungen">
+                                        </i>
+                                        <i v-if="(fieldRefCounts.get(field.id) || 0) > 1"
+                                            class="fas fa-share-alt text-[#d4a853] text-xs ml-1"
+                                            title="Referenzfeld — in mehreren Kategorien verwendet">
+                                        </i>
+                                    </span>
                                         <span class="text-xs px-2 py-0.5 rounded-full border"
                                             :class="getRequiredBadgeClass(field)">
                                             {{ getRequiredBadgeLabel(field) }}
@@ -2698,6 +2702,14 @@
                     return map;
                 });
 
+                const fieldRefCounts = computed(() => {
+                    const map = new Map();
+                    for (const fc of fieldCategories.value) {
+                        map.set(fc.fieldId, (map.get(fc.fieldId) || 0) + 1);
+                    }
+                    return map;
+                });
+
                 // ─── HELPERS ───
                 function generateId(arr) {
                     return arr.length > 0 ? Math.max(...arr.map(x => x.id)) + 1 : 1;
@@ -4506,7 +4518,7 @@
                     translationMap, optionsByField,
                     translationTexts, translationValues, missingLangs,
                     fieldWarnings, categoryWarnings, optionWarnings,
-                    fieldOptionDeps,
+                    fieldOptionDeps, fieldRefCounts,
                     newFieldType, newFieldRequired, newFieldConfig, newFieldConfigFields,
                     showCategoryModal, editingCategory, catTransMode, catTransNew, catTransSearch, catSelectedTransId,
                     catShowTransDropdown, catParentSearch, catSelectedParentId, catShowParentDropdown, catMetadata,
