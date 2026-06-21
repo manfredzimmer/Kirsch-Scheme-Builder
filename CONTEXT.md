@@ -313,7 +313,7 @@ The UI is German-language and organized as:
 - Select options: inline option editing, CSV import, plus option filtering.
 - Modals: category, field, option, dependency picker, option filter, delete confirmation, translation picker, language management, copy field, preview, required condition.
 
-SortableJS is used for category, field, and option ordering. Sortable instances are reinitialized in `reinitSortable()` via `nextTick()` after Vue updates. For option containers with >50 children, or large option containers rendered as a capped/searchable subset, Sortable is skipped to avoid performance overhead and accidental partial-list reordering.
+SortableJS is used for category, field, and option ordering. Sortable instances are reinitialized in `reinitSortable()` via `nextTick()` after Vue updates and when switching categories via a dedicated `watch(selectedCategoryId, ...)`. For option containers with >50 children, or large option containers rendered as a capped/searchable subset, Sortable is skipped to avoid performance overhead and accidental partial-list reordering.
 
 ### Preview Modal
 
@@ -410,7 +410,7 @@ The following optimizations keep the UI responsive with thousands of field optio
 - **`v-memo` on option header div** — The option header (translation text, slug, edit/delete buttons) is memoized against `[opt.value, opt.labelTranslationId, opt.order]`. Vue skips the entire subtree when none of those values changed, avoiding expensive `getTranslationText()` and `getEntityWarningType()` calls per option per render.
 - **`v-memo` on option filter rows** — Option filter modal rows are memoized against checkbox state, label, and slug. Toggling one option updates the affected checkbox state without forcing all rows to rebuild.
 - **Direct field property access** — The expanded panel uses `field.requiredCondition` / `field.multiSelectCondition` directly instead of calling `getRequiredCondition(field.id)` / `getMultiSelectCondition(field.id)` (which validated option IDs against `fieldOptions` on every call).
-- **Guarded `onUpdated`** — `reinitSortable()` only fires when the length of `categories`, `fields`, `fieldOptions`, or `fieldCategories` changes, not on every Vue update (which previously re-initialized SortableJS on 900+ DOM nodes for unrelated state changes).
+- **Guarded `onUpdated`** — `reinitSortable()` only fires when the length of `categories`, `fields`, `fieldOptions`, or `fieldCategories` changes, not on every Vue update (which previously re-initialized SortableJS on 900+ DOM nodes for unrelated state changes). A separate `watch(selectedCategoryId)` ensures Sortable is also initialized when switching categories (since no array length changes occur in that case).
 - **Large list Sortable guard** — `initOptionSortable()` skips containers with >50 children and capped large-option containers, since SortableJS is impractical and expensive on very large option lists.
 - **Collapsed options during modal open** — While `showOptionModal` or `showOptionFilterModal` is true, the full option list (hundreds/thousands of VNodes) is replaced with a simple count string (`"N Optionen"`). The user cannot interact with options behind the modal overlay anyway, and this eliminates render-function/VNode creation cost on modal interactions.
 

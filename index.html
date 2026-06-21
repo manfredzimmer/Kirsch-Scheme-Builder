@@ -2593,6 +2593,10 @@
                     }
                 });
 
+                watch(selectedCategoryId, () => {
+                    reinitSortable();
+                });
+
                 const filteredLanguages = computed(() => {
                     const q = languageSearch.value.toLowerCase();
                     return ISO_LANGUAGES.filter(l =>

@@ -649,6 +649,7 @@ The app includes optimizations for handling large datasets:
 - Field and option dependency lookups use precomputed `Map` lookups instead of inline `filter()` calls in the template.
 - The expanded field panel accesses `field.requiredCondition` and `field.multiSelectCondition` directly instead of calling validation functions that scanned `fieldOptions` on every call.
 - Option headers use `v-memo` to skip re-rendering when the slug, translation id, and order haven't changed.
+- SortableJS initialization is triggered on data mutations and when switching categories (via a watcher on the selected category), not on every UI update.
 - SortableJS is not initialized on option lists with more than 50 items to avoid expensive DOM scans.
 - The full option list collapses to a simple count when the option editing modal is open, keeping keystrokes fast even with thousands of options.
 
