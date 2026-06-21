@@ -728,59 +728,86 @@
                                             <div v-if="!optionsByField[field.id]?.length" class="text-center text-[#6b635a] py-6 text-s">
                                                 Keine Optionen
                                             </div>
-                                            <div v-else-if="showOptionModal" class="text-center text-[#6b635a] py-6 text-s">
+                                            <div v-else-if="showOptionModal || showOptionFilterModal" class="text-center text-[#6b635a] py-6 text-s">
                                                 {{ optionsByField[field.id].length }} Optionen
                                             </div>
-                                            <div v-else class="space-y-1.5 option-sortable-container">
-                                                <div v-for="opt in (optionsByField[field.id] || [])" :key="opt.id"
-                                                    :data-opt-id="opt.id"
-                                                    class="bg-[#242118] border border-[#3d3528] rounded-lg overflow-hidden">
-                                                    <!-- Option header -->
-                                                    <div v-memo="[opt.value, opt.labelTranslationId, opt.order]" class="flex items-center gap-2 px-3 py-2">
-                                                        <i class="fas fa-grip-vertical text-[#6b635a] text-sm cursor-grab handle-option"></i>
-                                                        <div class="flex-1 flex items-center gap-2 min-w-0">
-                                                            <span class="flex-1 min-w-0 text-sm text-amber-50 truncate"
-                                                                :title="translationTexts.get(opt.labelTranslationId)">
-                                                                {{ translationTexts.get(opt.labelTranslationId) }}
-                                                            </span>
-                                                            <span class="text-xs text-[#6b635a] shrink-0">slug:</span>
-                                                            <span class="w-24 text-sm text-[#a89f94] font-mono truncate"
-                                                                :title="opt.value">
-                                                                {{ opt.value }}
-                                                            </span>
-                                                            <i v-if="optionWarnings.get(opt.id) === 'missing'"
-                                                                class="fas fa-exclamation-triangle text-[#c44536] text-[10px]"
-                                                                :title="'Fehlende Übersetzungen: ' + (missingLangs.get(opt.labelTranslationId) || []).join(', ')">
-                                                            </i>
-                                                            <button @click="openEditOption(opt)"
-                                                                class="icon-btn p-1 rounded hover:bg-[#3d3528] text-s">
-                                                                <i class="fas fa-pen"></i>
-                                                            </button>
-                                                        </div>
-                                                        <button @click="confirmDelete('option', opt)"
-                                                            class="icon-btn p-1 rounded hover:bg-[#3d3528] text-[#c44536] text-s">
-                                                            <i class="fas fa-times"></i>
+                                            <div v-else>
+                                                <div v-if="optionsByField[field.id].length > LARGE_OPTION_LIST_LIMIT"
+                                                    class="bg-[#242118] border border-[#3d3528] rounded-lg p-3 mb-3 space-y-2">
+                                                    <div class="flex items-center gap-3">
+                                                        <input :value="optionListSearch[field.id] || ''"
+                                                            @input="setOptionListSearch(field.id, $event.target.value)"
+                                                            type="text" placeholder="Option suchen..."
+                                                            class="input-field flex-1 px-3 py-1.5 rounded-lg text-sm">
+                                                        <span class="text-xs text-[#6b635a] shrink-0">
+                                                            {{ (renderedOptionsByField[field.id] || []).length }} / {{ optionsByField[field.id].length }}
+                                                        </span>
+                                                        <button @click="toggleOptionListShowAll(field.id)"
+                                                            class="btn-ghost px-2 py-1 rounded text-s shrink-0">
+                                                            {{ optionListShowAll.has(field.id) ? 'Begrenzen' : 'Alle anzeigen' }}
                                                         </button>
                                                     </div>
-                                                    <!-- Option filters for this option -->
-                                                    <div class="px-3 pb-2 pl-8">
-                                                        <div v-for="fgroup in getOptionFilterDisplay(opt.id)" :key="'of-' + fgroup.fieldId"
-                                                            class="flex items-center gap-2 text-sm text-[#a89f94] mb-1 mt-1">
-                                                            <i class="fas fa-filter text-[#6b635a]"></i>
-                                                            <span>Filtere Optionen in <strong class="text-amber-50">{{ fgroup.fieldName }}</strong>:
-                                                                 <span v-for="(o, oi) in fgroup.options" :key="o.id">
-                                                                     {{ o.label }}<span v-if="oi < fgroup.options.length - 1">, </span>
-                                                                 </span>
-                                                             </span>
-                                                            <button @click="removeOptionDepGroup(opt.id, fgroup.fieldId)"
-                                                                class="text-[#c44536] hover:text-[#d9584a] ml-1" title="Alle entfernen">
-                                                                <i class="fas fa-times-circle"></i>
+                                                    <p v-if="!optionListSearch[field.id] && !optionListShowAll.has(field.id)"
+                                                        class="text-xs text-[#6b635a]">
+                                                        Große Optionsliste: zeige die ersten {{ LARGE_OPTION_LIST_LIMIT }} Optionen. Suche nach Slug oder Label, um weitere Optionen zu bearbeiten.
+                                                    </p>
+                                                </div>
+                                                <div v-if="(renderedOptionsByField[field.id] || []).length === 0"
+                                                    class="text-center text-[#6b635a] py-6 text-s">
+                                                    Keine passenden Optionen
+                                                </div>
+                                                <div v-else class="space-y-1.5 option-sortable-container"
+                                                    :data-large-options="optionsByField[field.id].length > LARGE_OPTION_LIST_LIMIT ? 'true' : 'false'">
+                                                    <div v-for="opt in (renderedOptionsByField[field.id] || [])" :key="opt.id"
+                                                        :data-opt-id="opt.id"
+                                                        class="bg-[#242118] border border-[#3d3528] rounded-lg overflow-hidden">
+                                                        <!-- Option header -->
+                                                        <div v-memo="[opt.value, opt.labelTranslationId, opt.order]" class="flex items-center gap-2 px-3 py-2">
+                                                            <i class="fas fa-grip-vertical text-[#6b635a] text-sm cursor-grab handle-option"></i>
+                                                            <div class="flex-1 flex items-center gap-2 min-w-0">
+                                                                <span class="flex-1 min-w-0 text-sm text-amber-50 truncate"
+                                                                    :title="translationTexts.get(opt.labelTranslationId)">
+                                                                    {{ translationTexts.get(opt.labelTranslationId) }}
+                                                                </span>
+                                                                <span class="text-xs text-[#6b635a] shrink-0">slug:</span>
+                                                                <span class="w-24 text-sm text-[#a89f94] font-mono truncate"
+                                                                    :title="opt.value">
+                                                                    {{ opt.value }}
+                                                                </span>
+                                                                <i v-if="optionWarnings.get(opt.id) === 'missing'"
+                                                                    class="fas fa-exclamation-triangle text-[#c44536] text-[10px]"
+                                                                    :title="'Fehlende Übersetzungen: ' + (missingLangs.get(opt.labelTranslationId) || []).join(', ')">
+                                                                </i>
+                                                                <button @click="openEditOption(opt)"
+                                                                    class="icon-btn p-1 rounded hover:bg-[#3d3528] text-s">
+                                                                    <i class="fas fa-pen"></i>
+                                                                </button>
+                                                            </div>
+                                                            <button @click="confirmDelete('option', opt)"
+                                                                class="icon-btn p-1 rounded hover:bg-[#3d3528] text-[#c44536] text-s">
+                                                                <i class="fas fa-times"></i>
                                                             </button>
                                                         </div>
-                                                        <button @click="openOptionFilterModal(opt)"
-                                                            class="text-sm text-[#d4a853] hover:text-[#e8c278] transition">
-                                                            <i class="fas fa-plus-circle mr-1"></i>Optionen filtern
-                                                        </button>
+                                                        <!-- Option filters for this option -->
+                                                        <div class="px-3 pb-2 pl-8">
+                                                            <div v-for="fgroup in getOptionFilterDisplay(opt.id)" :key="'of-' + fgroup.fieldId"
+                                                                class="flex items-center gap-2 text-sm text-[#a89f94] mb-1 mt-1">
+                                                                <i class="fas fa-filter text-[#6b635a]"></i>
+                                                                <span>Filtere Optionen in <strong class="text-amber-50">{{ fgroup.fieldName }}</strong>:
+                                                                     <span v-for="(o, oi) in fgroup.options" :key="o.id">
+                                                                         {{ o.label }}<span v-if="oi < fgroup.options.length - 1">, </span>
+                                                                     </span>
+                                                                 </span>
+                                                                <button @click="removeOptionDepGroup(opt.id, fgroup.fieldId)"
+                                                                    class="text-[#c44536] hover:text-[#d9584a] ml-1" title="Alle entfernen">
+                                                                    <i class="fas fa-times-circle"></i>
+                                                                </button>
+                                                            </div>
+                                                            <button @click="openOptionFilterModal(opt)"
+                                                                class="text-sm text-[#d4a853] hover:text-[#e8c278] transition">
+                                                                <i class="fas fa-plus-circle mr-1"></i>Optionen filtern
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1135,9 +1162,10 @@
                         </div>
                         <div class="p-2 space-y-0.5">
                             <div v-for="opt in group.options" :key="'vo-' + opt.id"
+                                v-memo="[optionFilterSelectedVisibleIds.has(opt.id), opt.label, opt.value]"
                                 @click="toggleOptionDependency(opt.id)"
                                 class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-[#2e2820] transition">
-                                <input :checked="opt.checked" type="checkbox"
+                                <input :checked="optionFilterSelectedVisibleIds.has(opt.id)" type="checkbox"
                                     class="accent-[#d4a853] pointer-events-none">
                                 <span class="text-sm text-amber-50">{{ opt.label }}</span>
                                 <span class="text-[10px] text-[#6b635a] font-mono">({{ opt.value }})</span>
@@ -1804,6 +1832,7 @@
                 const treeContainer = ref(null);
 
                 const fieldTypes = ['text', 'textarea', 'number', 'select', 'boolean', 'date', 'datetime'];
+                const LARGE_OPTION_LIST_LIMIT = 150;
 
                 // ─── CATEGORY MODAL STATE ───
                 const showCategoryModal = ref(false);
@@ -1843,6 +1872,8 @@
                 const optionFilterTriggerLabel = ref('');
                 const optionFilterSearch = ref('');
                 const optionFilterGroupedOptions = ref([]);
+                const optionListSearch = ref({});
+                const optionListShowAll = ref(new Set());
 
                 // ─── COPY MODAL STATE ───
                 const showCopyModal = ref(false);
@@ -2505,7 +2536,7 @@
                 const optionFilterGroupedComputed = computed(() => {
                     if (!optionFilterTriggerOptionId.value) return [];
                     if (!selectedCategoryId.value) return [];
-                    const triggerOpt = fieldOptions.value.find(o => o.id === optionFilterTriggerOptionId.value);
+                    const triggerOpt = optionById.value.get(optionFilterTriggerOptionId.value);
                     if (!triggerOpt) return [];
                     const categoryId = selectedCategoryId.value;
                     const catFieldIds = new Set(getFieldIdsForCategory(categoryId));
@@ -2520,10 +2551,7 @@
                         const items = options.map(o => ({
                             id: o.id,
                             label: getTranslationText(o.labelTranslationId),
-                            value: o.value,
-                            checked: optionDependencies.value.some(d =>
-                                d.optionId === optionFilterTriggerOptionId.value && d.visibleOptionId === o.id
-                            )
+                            value: o.value
                         }));
                         result.push({
                             fieldId: field.id,
@@ -2541,6 +2569,16 @@
                     }
 
                     return result;
+                });
+
+                const optionFilterSelectedVisibleIds = computed(() => {
+                    const triggerId = optionFilterTriggerOptionId.value;
+                    if (!triggerId) return new Set();
+                    const selected = new Set();
+                    for (const dep of getOptionDepsForOption(triggerId)) {
+                        selected.add(dep.visibleOptionId);
+                    }
+                    return selected;
                 });
 
                 const previewAvailableCategories = computed(() => {
@@ -2625,6 +2663,27 @@
                     return map;
                 });
 
+                const fieldById = computed(() => {
+                    const map = new Map();
+                    for (const field of fields.value) {
+                        map.set(field.id, field);
+                    }
+                    return map;
+                });
+
+                const optionById = computed(() => {
+                    const map = new Map();
+                    for (const option of fieldOptions.value) {
+                        map.set(option.id, option);
+                    }
+                    return map;
+                });
+
+                const selectedCategoryFieldIds = computed(() => {
+                    if (!selectedCategoryId.value) return new Set();
+                    return new Set(getFieldIdsForCategory(selectedCategoryId.value));
+                });
+
                 // ─── PRECOMPUTED MAPS ───
                 const translationTexts = computed(() => {
                     const map = new Map();
@@ -2632,6 +2691,32 @@
                         map.set(t.id, t.translation?.de || 'Unknown');
                     }
                     return map;
+                });
+
+                const renderedOptionsByField = computed(() => {
+                    const rendered = {};
+                    const searchByField = optionListSearch.value;
+                    const showAllIds = optionListShowAll.value;
+
+                    for (const [fieldIdKey, options] of Object.entries(optionsByField.value)) {
+                        const fieldId = Number(fieldIdKey);
+                        const query = (searchByField[fieldId] || '').trim().toLowerCase();
+                        let visible = options;
+
+                        if (query) {
+                            visible = options.filter(option => {
+                                const label = (translationTexts.value.get(option.labelTranslationId) || '').toLowerCase();
+                                const slug = (option.value || '').toLowerCase();
+                                return label.includes(query) || slug.includes(query);
+                            });
+                        }
+
+                        rendered[fieldId] = !showAllIds.has(fieldId) && visible.length > LARGE_OPTION_LIST_LIMIT
+                            ? visible.slice(0, LARGE_OPTION_LIST_LIMIT)
+                            : visible;
+                    }
+
+                    return rendered;
                 });
 
                 const translationValues = computed(() => {
@@ -2706,6 +2791,58 @@
                     return map;
                 });
 
+                const optionDependenciesByTrigger = computed(() => {
+                    const map = new Map();
+                    for (const dep of optionDependencies.value) {
+                        if (!map.has(dep.optionId)) map.set(dep.optionId, []);
+                        map.get(dep.optionId).push(dep);
+                    }
+                    return map;
+                });
+
+                const optionDependencyByPair = computed(() => {
+                    const map = new Map();
+                    for (const dep of optionDependencies.value) {
+                        map.set(dep.optionId + ':' + dep.visibleOptionId, dep);
+                    }
+                    return map;
+                });
+
+                const optionFilterDisplayByOption = computed(() => {
+                    const grouped = new Map();
+                    const catFieldIds = selectedCategoryFieldIds.value;
+
+                    for (const dep of optionDependencies.value) {
+                        const opt = optionById.value.get(dep.visibleOptionId);
+                        if (!opt) continue;
+                        const fieldId = opt.fieldId;
+                        if (selectedCategoryId.value && !catFieldIds.has(fieldId)) continue;
+
+                        if (!grouped.has(dep.optionId)) grouped.set(dep.optionId, new Map());
+                        const byField = grouped.get(dep.optionId);
+
+                        if (!byField.has(fieldId)) {
+                            const field = fieldById.value.get(fieldId);
+                            byField.set(fieldId, {
+                                fieldId,
+                                fieldName: field ? (translationTexts.value.get(field.translationId) || 'Unknown') : 'Unknown',
+                                options: []
+                            });
+                        }
+
+                        byField.get(fieldId).options.push({
+                            id: opt.id,
+                            label: translationTexts.value.get(opt.labelTranslationId) || 'Unknown'
+                        });
+                    }
+
+                    const map = new Map();
+                    for (const [optionId, byField] of grouped.entries()) {
+                        map.set(optionId, Array.from(byField.values()));
+                    }
+                    return map;
+                });
+
                 const fieldRefCounts = computed(() => {
                     const map = new Map();
                     for (const fc of fieldCategories.value) {
@@ -2747,9 +2884,7 @@
                 }
 
                 function getFieldOptionsList(fieldId) {
-                    return fieldOptions.value
-                        .filter(o => o.fieldId === fieldId)
-                        .sort((a, b) => a.order - b.order);
+                    return optionsByField.value[fieldId] || [];
                 }
 
                 function getDependencyChildFieldId(dep) {
@@ -2761,7 +2896,7 @@
                     if (dep.dependsOnFieldId != null) return dep.dependsOnFieldId;
                     if (dep.parentFieldId != null) return dep.parentFieldId;
                     if (dep.optionId != null) {
-                        const opt = fieldOptions.value.find(o => o.id === dep.optionId);
+                        const opt = optionById.value.get(dep.optionId);
                         return opt?.fieldId ?? null;
                     }
                     return null;
@@ -2784,7 +2919,7 @@
                 }
 
                 function getDependencySourceName(fieldId) {
-                    const f = fields.value.find(f => f.id === fieldId);
+                    const f = fieldById.value.get(fieldId);
                     return f ? getTranslationText(f.translationId) : 'Unknown';
                 }
 
@@ -2905,14 +3040,14 @@
                 }
 
                 function getFieldOptionDeps(fieldId) {
-                    return fieldOptionDependencies.value.filter(d => d.fieldId === fieldId);
+                    return fieldOptionDeps.value.get(fieldId) || [];
                 }
 
                 function getFieldOptionDepSummary(fieldId) {
                     const deps = getFieldOptionDeps(fieldId);
                     if (deps.length === 0) return null;
                     return deps.map(d => {
-                        const opt = fieldOptions.value.find(o => o.id === d.optionId);
+                        const opt = optionById.value.get(d.optionId);
                         return opt ? getTranslationText(opt.labelTranslationId) : '?';
                     });
                 }
@@ -2922,8 +3057,8 @@
                     const usedPairs = new Set();
 
                     for (const dep of rawDeps || []) {
-                        const option = fieldOptions.value.find(o => o.id === dep.optionId);
-                        const visibleOption = fieldOptions.value.find(o => o.id === dep.visibleOptionId);
+                        const option = optionById.value.get(dep.optionId);
+                        const visibleOption = optionById.value.get(dep.visibleOptionId);
                         if (!option || !visibleOption) continue;
                         if (!fieldIdsShareCategory(option.fieldId, visibleOption.fieldId)) continue;
 
@@ -2941,34 +3076,11 @@
                 }
 
                 function getOptionDepsForOption(optionId) {
-                    return optionDependencies.value.filter(d => d.optionId === optionId);
+                    return optionDependenciesByTrigger.value.get(optionId) || [];
                 }
 
                 function getOptionFilterDisplay(optionId) {
-                    const deps = optionDependencies.value.filter(d => d.optionId === optionId);
-                    const byField = {};
-                    for (const dep of deps) {
-                        const opt = fieldOptions.value.find(o => o.id === dep.visibleOptionId);
-                        if (!opt) continue;
-                        const fieldId = opt.fieldId;
-                        if (selectedCategoryId.value) {
-                            const catFieldIds = new Set(getFieldIdsForCategory(selectedCategoryId.value));
-                            if (!catFieldIds.has(fieldId)) continue;
-                        }
-                        if (!byField[fieldId]) {
-                            const field = fields.value.find(f => f.id === fieldId);
-                            byField[fieldId] = {
-                                fieldId,
-                                fieldName: field ? getTranslationText(field.translationId) : 'Unknown',
-                                options: []
-                            };
-                        }
-                        byField[fieldId].options.push({
-                            id: opt.id,
-                            label: getTranslationText(opt.labelTranslationId)
-                        });
-                    }
-                    return Object.values(byField);
+                    return optionFilterDisplayByOption.value.get(optionId) || [];
                 }
 
                 // ─── BOOLEAN CONTROL ───
@@ -3323,6 +3435,20 @@
                     if (set.has(id)) set.delete(id);
                     else set.add(id);
                     expandedFieldIds.value = set;
+                }
+
+                function setOptionListSearch(fieldId, value) {
+                    optionListSearch.value = {
+                        ...optionListSearch.value,
+                        [fieldId]: value
+                    };
+                }
+
+                function toggleOptionListShowAll(fieldId) {
+                    const set = new Set(optionListShowAll.value);
+                    if (set.has(fieldId)) set.delete(fieldId);
+                    else set.add(fieldId);
+                    optionListShowAll.value = set;
                 }
 
                 function openAddCategory() {
@@ -3751,9 +3877,7 @@
                     const triggerId = optionFilterTriggerOptionId.value;
                     if (!triggerId) return;
 
-                    const existing = optionDependencies.value.find(d =>
-                        d.optionId === triggerId && d.visibleOptionId === visibleOptionId
-                    );
+                    const existing = optionDependencyByPair.value.get(triggerId + ':' + visibleOptionId);
 
                     if (existing) {
                         optionDependencies.value = optionDependencies.value.filter(d => d.id !== existing.id);
@@ -3765,7 +3889,7 @@
                 }
 
                 function removeOptionDepGroup(triggerOptionId, fieldId) {
-                    const optIds = new Set(fieldOptions.value.filter(o => o.fieldId === fieldId).map(o => o.id));
+                    const optIds = new Set(getFieldOptionsList(fieldId).map(o => o.id));
                     optionDependencies.value = optionDependencies.value.filter(d =>
                         !(d.optionId === triggerOptionId && optIds.has(d.visibleOptionId))
                     );
@@ -3799,7 +3923,7 @@
                 }
 
                 function sortOptions(field) {
-                    const opts = fieldOptions.value.filter(o => o.fieldId === field.id);
+                    const opts = getFieldOptionsList(field.id);
                     const sorted = [...opts].sort((a, b) =>
                         getTranslationText(a.labelTranslationId).localeCompare(getTranslationText(b.labelTranslationId), 'de')
                     );
@@ -4476,8 +4600,9 @@
 
                 function initOptionSortable() {
                     document.querySelectorAll('.option-sortable-container').forEach(container => {
-                        if (container.children.length > 50) return;
                         if (container._optionSortable) container._optionSortable.destroy();
+                        container._optionSortable = null;
+                        if (container.dataset.largeOptions === 'true' || container.children.length > 50) return;
                         container._optionSortable = Sortable.create(container, {
                             handle: '.handle-option',
                             animation: 200,
@@ -4519,11 +4644,12 @@
 
                 return {
                     hasProject, projectName, editingProjectName, projectNameInput, categories, fields, fieldCategories, fieldOptions, fieldDependencies, optionDependencies, fieldOptionDependencies, translations, languages,
+                    LARGE_OPTION_LIST_LIMIT,
                     selectedCategoryId, expandedCategoryIds, expandedFieldIds, searchQuery, fileInput, treeContainer, fieldTypes,
                     selectedCategory, selectedCategoryName, currentBreadcrumbs, currentFields, flatTree,
                     filteredCatTranslations, filteredCatParents, filteredFieldNameTrans, filteredFieldPlaceholderTrans,
                     filteredLanguages, filteredDepFields,
-                    translationMap, optionsByField,
+                    translationMap, optionsByField, renderedOptionsByField,
                     translationTexts, translationValues, missingLangs,
                     fieldWarnings, categoryWarnings, optionWarnings,
                     fieldOptionDeps, fieldRefCounts,
@@ -4539,6 +4665,7 @@
                     showCopyModal, copySourceField, copyCategorySearch, copySelectedCategoryIds,
                     filteredCopyCategories, openCopyModal, toggleCopyCategory, executeDeepCopy, executeReferenceCopy,
                     showOptionFilterModal, optionFilterTriggerOptionId, optionFilterTriggerLabel, optionFilterSearch, optionFilterGroupedComputed,
+                    optionFilterSelectedVisibleIds, optionListSearch, optionListShowAll,
                     showDeleteModal, deletePreview, deleteLocalAction, deletePrimaryLabel, deleteLocalLabel,
                     showTransPicker, transPickerSearch, filteredTransPicker, openTranslationPicker, selectTransPicker,
                     showLanguageModal, languageSearch, showLanguageDropdown, showRemoveLangModal, removeLangInfo,
@@ -4563,7 +4690,7 @@
                     isMultiSelectConditionMet, getEffectiveMultiSelect,
                     getBreadcrumbPathText, slugify, fieldTypeIcon, fieldConfigFields, changeFieldType, updateFieldConfig,
                     hasMissingTranslation, getMissingLanguages, getEntityWarningType,
-                    selectCategory, toggleCategoryExpand, toggleFieldExpand,
+                    selectCategory, toggleCategoryExpand, toggleFieldExpand, setOptionListSearch, toggleOptionListShowAll,
                     openAddCategory, openEditCategory, closeCategoryModal, selectCatTranslation, selectCatParent, saveCategory,
                     openAddField, openEditField, closeFieldModal, selectFieldNameTrans, selectFieldPlaceholderTrans, saveField,
                     openAddOption, openEditOption, closeOptionModal, selectOptionTrans, saveOption, triggerCSVImport, importOptionsFromCSV,
