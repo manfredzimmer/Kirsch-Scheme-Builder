@@ -310,7 +310,7 @@ The UI is German-language and organized as:
 - Left sidebar: category tree, project actions, language management. Each category shows its child count and, if non-zero, its direct field count (blue badge with cube icon).
 - Main area: selected category breadcrumb, category summary, field list. Each field header shows its type icon, name (with missing-translation warnings), required badge, multi-select badge (for select fields), field type label, and a share-alt icon when the field is shared across multiple categories.
 - Expanded field panel: field translations, placeholder translations, type/config, required toggle (with optional conditional-required editor), field dependency, boolean control (Steuerung), select options.
-- Select options: inline option editing, CSV import, plus option filtering.
+- Select options: inline option editing, CSV import, bulk delete, plus option filtering.
 - Modals: category, field, option, dependency picker, option filter, delete confirmation, translation picker, language management, copy field, preview, required condition.
 
 SortableJS is used for category, field, and option ordering. Sortable instances are reinitialized in `reinitSortable()` via `nextTick()` after Vue updates and when switching categories via a dedicated `watch(selectedCategoryId, ...)`. For option containers with >50 children, or large option containers rendered as a capped/searchable subset, Sortable is skipped to avoid performance overhead and accidental partial-list reordering.
@@ -390,6 +390,27 @@ An **Import** button ("Optionen" section header, between "Sortieren" and "+Optio
 - `csvImportTargetFieldLabel` — display name of the target field.
 - `csvImportTriggerGroups` — grouped selectable options from other select fields in the same category (excluding the target field), filtered by search query.
 - `csvImportCanSubmit` — true when a CSV file is selected.
+
+## Bulk Delete Options
+
+A **Mehrere Löschen** button (red, with trash icon) sits between the "Import" and "+Option" buttons in the "Optionen" section header. It opens a modal for selecting and deleting multiple field options at once.
+
+- `openBulkDeleteOptions(field)` sets the target field and opens the modal.
+- `closeBulkDeleteModal()` resets all bulk delete state and closes the modal.
+- `toggleBulkDeleteOption(optionId)` toggles a single option in the selection set.
+- `executeBulkDelete()` deletes all selected options for the target field, cleans up `optionDependencies`, `fieldOptionDependencies`, normalizes required/multi-select conditions, and removes orphaned translations.
+
+**State refs:** `showBulkDeleteModal`, `bulkDeleteTargetField`, `bulkDeleteSearch`, `bulkDeleteSelectedIds`.
+
+**Computed properties:**
+- `bulkDeleteTargetFieldLabel` — display name of the target field.
+- `bulkDeleteFilteredOptions` — options of the target field, filtered by search query against label and slug.
+
+**Modal behavior:**
+- Clicking anywhere on an option row toggles its selection state.
+- Selected rows are highlighted with a red tint, red border, and filled checkbox with checkmark.
+- The footer button reads "X Optionen löschen" (with trash icon) and is disabled when nothing is selected.
+- The options list is searchable via a text input.
 
 ## Performance Optimizations
 

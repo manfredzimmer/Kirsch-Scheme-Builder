@@ -14,7 +14,7 @@ The app is currently a single-file static application in `index.html`. It runs d
 - Multi-select field handling with optional conditional-multi-select state: multi-select mode can depend on which select options the end user has chosen.
 - Localized field labels, placeholders, category names, and option labels.
 - Language management with missing-translation warnings.
-- Select field options with localized labels, stable slug values, manual or alphabetical sorting, and CSV import.
+- Select field options with localized labels, stable slug values, manual or alphabetical sorting, CSV import, and bulk delete.
 - Field dependencies: show one field only after another field in the same category has a value.
 - Boolean field control: boolean fields can control visibility of other fields via true/false conditions.
 - Option filters: restrict options in one select field based on a selected option in another select field.

@@ -720,6 +720,10 @@
                                                     <button @click="triggerCSVImport(field)" class="btn-ghost px-2 py-1 rounded text-s">
                                                         <i class="fas fa-file-import mr-1"></i>Import
                                                     </button>
+                                                    <button @click="openBulkDeleteOptions(field)" class="px-2 py-1 rounded text-s"
+                                                        style="background: rgba(196,69,54,0.2); color: #d9584a; border: 1px solid rgba(196,69,54,0.3);">
+                                                        <i class="fas fa-trash-alt mr-1"></i>Mehrere Löschen
+                                                    </button>
                                                     <button @click="openAddOption(field)" class="btn-primary px-3 py-1 rounded text-s">
                                                         <i class="fas fa-plus mr-1"></i>Option
                                                     </button>
@@ -1193,6 +1197,59 @@
                     <button @click="executeCSVImport" :disabled="!csvImportCanSubmit"
                         class="btn-primary px-5 py-2.5 rounded-lg"
                         :class="!csvImportCanSubmit ? 'opacity-40 cursor-not-allowed' : ''">Importieren</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Delete Options Modal -->
+        <div v-if="showBulkDeleteModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between">
+                    <h2 class="modal-title text-2xl">Optionen löschen</h2>
+                    <button @click="closeBulkDeleteModal" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5 space-y-4">
+                    <div>
+                        <p class="text-sm text-[#a89f94] mb-2">
+                            Optionen löschen in: <strong class="text-amber-50">{{ bulkDeleteTargetFieldLabel }}</strong>
+                        </p>
+                    </div>
+                    <div>
+                        <input v-model="bulkDeleteSearch" type="text" placeholder="Option suchen..."
+                            class="input-field w-full px-4 py-2 rounded-lg text-sm">
+                    </div>
+                    <div v-if="bulkDeleteFilteredOptions.length === 0" class="text-center text-[#6b635a] py-8 text-sm">
+                        Keine Optionen gefunden
+                    </div>
+                    <div v-else class="space-y-1 max-h-[65vh] overflow-y-auto">
+                        <div v-for="opt in bulkDeleteFilteredOptions" :key="'bd-' + opt.id"
+                            @click="toggleBulkDeleteOption(opt.id)"
+                            class="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition"
+                            :class="bulkDeleteSelectedIds.has(opt.id)
+                                ? 'bg-[rgba(196,69,54,0.15)] border border-[rgba(196,69,54,0.4)]'
+                                : 'bg-[#242118] border border-[#3d3528] hover:bg-[#2e2820]'">
+                            <div class="w-4 h-4 rounded border-2 flex items-center justify-center shrink-0"
+                                :class="bulkDeleteSelectedIds.has(opt.id)
+                                    ? 'bg-[#c44536] border-[#c44536]'
+                                    : 'border-[#6b635a]'">
+                                <i v-if="bulkDeleteSelectedIds.has(opt.id)" class="fas fa-check text-white text-[10px]"></i>
+                            </div>
+                            <span class="text-sm text-amber-50 flex-1 min-w-0 truncate">{{ translationTexts.get(opt.labelTranslationId) }}</span>
+                            <span class="text-[10px] text-[#6b635a] font-mono shrink-0">({{ opt.value }})</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end gap-3">
+                    <button @click="closeBulkDeleteModal" class="btn-ghost px-5 py-2.5 rounded-lg">Abbrechen</button>
+                    <button @click="executeBulkDelete" :disabled="bulkDeleteSelectedIds.size === 0"
+                        class="px-5 py-2.5 rounded-lg text-white transition"
+                        :class="bulkDeleteSelectedIds.size === 0
+                            ? 'opacity-40 cursor-not-allowed bg-[#c44536]'
+                            : 'bg-[#c44536] hover:bg-[#d9584a]'">
+                        <i class="fas fa-trash-alt mr-1.5"></i>{{ bulkDeleteSelectedIds.size }} Optionen löschen
+                    </button>
                 </div>
             </div>
         </div>
@@ -1942,6 +1999,12 @@
                 const csvImportTriggerOptionId = ref(null);
                 const csvImportSearch = ref('');
                 const csvImportError = ref('');
+
+                // ─── BULK DELETE OPTIONS MODAL STATE ───
+                const showBulkDeleteModal = ref(false);
+                const bulkDeleteTargetField = ref(null);
+                const bulkDeleteSearch = ref('');
+                const bulkDeleteSelectedIds = ref(new Set());
 
                 // ─── COPY MODAL STATE ───
                 const showCopyModal = ref(false);
@@ -2693,6 +2756,24 @@
                 const csvImportCanSubmit = computed(() =>
                     !!csvImportFile.value
                 );
+
+                const bulkDeleteTargetFieldLabel = computed(() => {
+                    return bulkDeleteTargetField.value
+                        ? getTranslationText(bulkDeleteTargetField.value.translationId)
+                        : '';
+                });
+
+                const bulkDeleteFilteredOptions = computed(() => {
+                    if (!bulkDeleteTargetField.value) return [];
+                    const q = bulkDeleteSearch.value.trim().toLowerCase();
+                    const options = getFieldOptionsList(bulkDeleteTargetField.value.id);
+                    if (!q) return options;
+                    return options.filter(o => {
+                        const label = (getTranslationText(o.labelTranslationId) || '').toLowerCase();
+                        const val = String(o.value || '').toLowerCase();
+                        return label.includes(q) || val.includes(q);
+                    });
+                });
 
                 const optionFilterSelectedVisibleIds = computed(() => {
                     const triggerId = optionFilterTriggerOptionId.value;
@@ -3938,6 +4019,54 @@
                     );
                 }
 
+                function openBulkDeleteOptions(field) {
+                    bulkDeleteTargetField.value = field;
+                    bulkDeleteSearch.value = '';
+                    bulkDeleteSelectedIds.value = new Set();
+                    showBulkDeleteModal.value = true;
+                }
+
+                function closeBulkDeleteModal() {
+                    showBulkDeleteModal.value = false;
+                    bulkDeleteTargetField.value = null;
+                    bulkDeleteSearch.value = '';
+                    bulkDeleteSelectedIds.value = new Set();
+                }
+
+                function toggleBulkDeleteOption(optionId) {
+                    const s = new Set(bulkDeleteSelectedIds.value);
+                    if (s.has(optionId)) {
+                        s.delete(optionId);
+                    } else {
+                        s.add(optionId);
+                    }
+                    bulkDeleteSelectedIds.value = s;
+                }
+
+                function executeBulkDelete() {
+                    if (!bulkDeleteTargetField.value || bulkDeleteSelectedIds.value.size === 0) return;
+                    const idsToDelete = new Set(bulkDeleteSelectedIds.value);
+                    const fieldId = bulkDeleteTargetField.value.id;
+
+                    fieldOptions.value = fieldOptions.value.filter(o => !(o.fieldId === fieldId && idsToDelete.has(o.id)));
+
+                    optionDependencies.value = optionDependencies.value.filter(d =>
+                        !(idsToDelete.has(d.optionId) || idsToDelete.has(d.visibleOptionId))
+                    );
+                    optionDependencies.value = normalizeOptionDependencies();
+
+                    fieldOptionDependencies.value = fieldOptionDependencies.value.filter(d =>
+                        !idsToDelete.has(d.optionId)
+                    );
+                    fieldOptionDependencies.value = normalizeFieldOptionDependencies();
+
+                    normalizeFieldRequiredConditions();
+                    normalizeFieldMultiSelectConditions();
+                    cleanupOrphanedTranslations();
+
+                    closeBulkDeleteModal();
+                }
+
                 function importOptionsFromCSV(file, field, triggerOptionId = null) {
                     const reader = new FileReader();
                     reader.onload = function (e) {
@@ -4844,6 +4973,9 @@
                     optionFilterSelectedVisibleIds, optionListSearch, optionListShowAll,
                     showCSVImportModal, csvImportTargetField, csvImportFile, csvImportTriggerOptionId, csvImportSearch, csvImportError,
                     csvImportTargetFieldLabel, csvImportTriggerGroups, csvImportCanSubmit,
+                    showBulkDeleteModal, bulkDeleteTargetField, bulkDeleteSearch, bulkDeleteSelectedIds,
+                    bulkDeleteTargetFieldLabel, bulkDeleteFilteredOptions,
+                    openBulkDeleteOptions, closeBulkDeleteModal, toggleBulkDeleteOption, executeBulkDelete,
                     showDeleteModal, deletePreview, deleteLocalAction, deletePrimaryLabel, deleteLocalLabel,
                     showTransPicker, transPickerSearch, filteredTransPicker, openTranslationPicker, selectTransPicker,
                     showLanguageModal, languageSearch, showLanguageDropdown, showRemoveLangModal, removeLangInfo,
