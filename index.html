@@ -1137,6 +1137,66 @@
             </div>
         </div>
 
+        <!-- CSV Import Modal -->
+        <div v-if="showCSVImportModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
+                <div class="px-6 py-5 border-b border-[#3d3528] flex items-center justify-between">
+                    <h2 class="modal-title text-2xl">Optionen importieren</h2>
+                    <button @click="closeCSVImportModal" class="icon-btn p-2 rounded-lg hover:bg-[#3d3528]">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5 space-y-5">
+                    <div>
+                        <p class="text-sm text-[#a89f94] mb-2">
+                            Importiere Optionen in: <strong class="text-amber-50">{{ csvImportTargetFieldLabel }}</strong>
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-[#a89f94] mb-1.5">CSV-Datei</label>
+                        <input type="file" accept=".csv" @change="handleCSVImportFileChange"
+                            class="input-field w-full px-4 py-2 rounded-lg text-sm cursor-pointer file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-[#3d3528] file:text-amber-50 file:text-sm hover:file:bg-[#4d4538]">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-[#a89f94] mb-1.5">Filter-Auslöser <span class="text-[#6b635a]">(optional)</span></label>
+                        <div class="relative mb-3">
+                            <input v-model="csvImportSearch" type="text" placeholder="Option suchen..."
+                                class="input-field w-full px-4 py-2 rounded-lg text-sm">
+                        </div>
+                        <div v-if="csvImportTriggerGroups.length === 0" class="text-center text-[#6b635a] py-8 text-sm">
+                            Keine anderen Select-Felder mit Optionen in dieser Kategorie
+                        </div>
+                        <div v-for="group in csvImportTriggerGroups" :key="'cig-' + group.fieldId"
+                            class="mb-4 bg-[#242118] border border-[#3d3528] rounded-lg overflow-hidden">
+                            <div class="px-4 py-2 border-b border-[#3d3528] text-sm text-[#a89f94] font-medium">
+                                {{ group.fieldName }}
+                            </div>
+                            <div class="p-2 space-y-0.5">
+                                <div v-for="opt in group.options" :key="'cio-' + opt.id"
+                                    @click="selectCSVImportTriggerOption(opt.id)"
+                                    class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-[#2e2820] transition"
+                                    :class="csvImportTriggerOptionId === opt.id ? 'bg-[rgba(212,168,83,0.12)] border border-[#d4a853]' : ''">
+                                    <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                                        :class="csvImportTriggerOptionId === opt.id ? 'border-[#d4a853]' : 'border-[#6b635a]'">
+                                        <div v-if="csvImportTriggerOptionId === opt.id" class="w-2 h-2 rounded-full bg-[#d4a853]"></div>
+                                    </div>
+                                    <span class="text-sm text-amber-50">{{ opt.label }}</span>
+                                    <span class="text-[10px] text-[#6b635a] font-mono">({{ opt.value }})</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p v-if="csvImportError" class="text-red-400 text-sm">{{ csvImportError }}</p>
+                </div>
+                <div class="px-6 py-5 border-t border-[#3d3528] flex justify-end gap-3">
+                    <button @click="closeCSVImportModal" class="btn-ghost px-5 py-2.5 rounded-lg">Abbrechen</button>
+                    <button @click="executeCSVImport" :disabled="!csvImportCanSubmit"
+                        class="btn-primary px-5 py-2.5 rounded-lg"
+                        :class="!csvImportCanSubmit ? 'opacity-40 cursor-not-allowed' : ''">Importieren</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Option Filter Modal -->
         <div v-if="showOptionFilterModal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
             <div class="modal-content rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide">
@@ -1875,6 +1935,14 @@
                 const optionListSearch = ref({});
                 const optionListShowAll = ref(new Set());
 
+                // ─── CSV IMPORT MODAL STATE ───
+                const showCSVImportModal = ref(false);
+                const csvImportTargetField = ref(null);
+                const csvImportFile = ref(null);
+                const csvImportTriggerOptionId = ref(null);
+                const csvImportSearch = ref('');
+                const csvImportError = ref('');
+
                 // ─── COPY MODAL STATE ───
                 const showCopyModal = ref(false);
                 const copySourceField = ref(null);
@@ -2570,6 +2638,57 @@
 
                     return result;
                 });
+
+                const csvImportTargetFieldLabel = computed(() => {
+                    return csvImportTargetField.value
+                        ? getTranslationText(csvImportTargetField.value.translationId)
+                        : '';
+                });
+
+                const csvImportTriggerGroups = computed(() => {
+                    if (!csvImportTargetField.value || !selectedCategoryId.value) return [];
+
+                    const targetFieldId = csvImportTargetField.value.id;
+                    const catFieldIds = new Set(getFieldIdsForCategory(selectedCategoryId.value));
+                    const q = csvImportSearch.value.trim().toLowerCase();
+
+                    const selectFields = fields.value.filter(f =>
+                        catFieldIds.has(f.id) &&
+                        f.type === 'select' &&
+                        f.id !== targetFieldId
+                    );
+
+                    const groups = [];
+                    for (const field of selectFields) {
+                        const options = getFieldOptionsList(field.id).map(o => ({
+                            id: o.id,
+                            label: getTranslationText(o.labelTranslationId),
+                            value: o.value
+                        }));
+
+                        const filteredOptions = q
+                            ? options.filter(o =>
+                                o.label.toLowerCase().includes(q) ||
+                                String(o.value || '').toLowerCase().includes(q) ||
+                                getTranslationText(field.translationId).toLowerCase().includes(q)
+                              )
+                            : options;
+
+                        if (filteredOptions.length > 0) {
+                            groups.push({
+                                fieldId: field.id,
+                                fieldName: getTranslationText(field.translationId),
+                                options: filteredOptions
+                            });
+                        }
+                    }
+
+                    return groups;
+                });
+
+                const csvImportCanSubmit = computed(() =>
+                    !!csvImportFile.value
+                );
 
                 const optionFilterSelectedVisibleIds = computed(() => {
                     const triggerId = optionFilterTriggerOptionId.value;
@@ -3775,20 +3894,47 @@
 
                 // ─── CSV IMPORT ───
                 function triggerCSVImport(field) {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = '.csv';
-                    input.addEventListener('change', function (e) {
-                        const file = e.target.files[0];
-                        if (file) {
-                            importOptionsFromCSV(file, field);
-                        }
-                        e.target.value = '';
-                    });
-                    input.click();
+                    csvImportTargetField.value = field;
+                    csvImportFile.value = null;
+                    csvImportTriggerOptionId.value = null;
+                    csvImportSearch.value = '';
+                    csvImportError.value = '';
+                    showCSVImportModal.value = true;
                 }
 
-                function importOptionsFromCSV(file, field) {
+                function closeCSVImportModal() {
+                    showCSVImportModal.value = false;
+                    csvImportTargetField.value = null;
+                    csvImportFile.value = null;
+                    csvImportTriggerOptionId.value = null;
+                    csvImportSearch.value = '';
+                    csvImportError.value = '';
+                }
+
+                function handleCSVImportFileChange(e) {
+                    csvImportFile.value = e.target.files?.[0] || null;
+                    csvImportError.value = '';
+                }
+
+                function selectCSVImportTriggerOption(optionId) {
+                    csvImportTriggerOptionId.value = optionId;
+                    csvImportError.value = '';
+                }
+
+                function executeCSVImport() {
+                    if (!csvImportTargetField.value || !csvImportFile.value) {
+                        csvImportError.value = 'Bitte CSV-Datei auswählen.';
+                        return;
+                    }
+
+                    importOptionsFromCSV(
+                        csvImportFile.value,
+                        csvImportTargetField.value,
+                        csvImportTriggerOptionId.value
+                    );
+                }
+
+                function importOptionsFromCSV(file, field, triggerOptionId = null) {
                     const reader = new FileReader();
                     reader.onload = function (e) {
                         const text = e.target.result;
@@ -3806,6 +3952,7 @@
                         }));
                         let order = existing.length;
                         let importedCount = 0;
+                        const importedOptionIds = [];
 
                         for (const label of lines) {
                             let slug = slugify(label);
@@ -3820,19 +3967,44 @@
                             existingSlugs.add(uniqueSlug);
 
                             const labelId = createTranslation({ de: label });
+                            const optionId = generateId(fieldOptions.value);
                             fieldOptions.value.push({
-                                id: generateId(fieldOptions.value),
+                                id: optionId,
                                 fieldId: field.id,
                                 labelTranslationId: labelId,
                                 value: uniqueSlug,
                                 order: order
                             });
+                            importedOptionIds.push(optionId);
                             order++;
                             importedCount++;
                         }
 
+                        if (triggerOptionId && importedOptionIds.length > 0) {
+                            const existingPairs = new Set(
+                                optionDependencies.value.map(d => d.optionId + ':' + d.visibleOptionId)
+                            );
+
+                            for (const visibleOptionId of importedOptionIds) {
+                                const pairKey = triggerOptionId + ':' + visibleOptionId;
+                                if (existingPairs.has(pairKey)) continue;
+                                existingPairs.add(pairKey);
+
+                                optionDependencies.value.push({
+                                    id: generateId(optionDependencies.value),
+                                    optionId: triggerOptionId,
+                                    visibleOptionId
+                                });
+                            }
+
+                            optionDependencies.value = normalizeOptionDependencies();
+                        }
+
                         if (importedCount > 0) {
                             reinitSortable();
+                            closeCSVImportModal();
+                        } else {
+                            csvImportError.value = 'Keine importierbaren Optionen gefunden.';
                         }
                     };
                     reader.readAsText(file, 'UTF-8');
@@ -4666,6 +4838,8 @@
                     filteredCopyCategories, openCopyModal, toggleCopyCategory, executeDeepCopy, executeReferenceCopy,
                     showOptionFilterModal, optionFilterTriggerOptionId, optionFilterTriggerLabel, optionFilterSearch, optionFilterGroupedComputed,
                     optionFilterSelectedVisibleIds, optionListSearch, optionListShowAll,
+                    showCSVImportModal, csvImportTargetField, csvImportFile, csvImportTriggerOptionId, csvImportSearch, csvImportError,
+                    csvImportTargetFieldLabel, csvImportTriggerGroups, csvImportCanSubmit,
                     showDeleteModal, deletePreview, deleteLocalAction, deletePrimaryLabel, deleteLocalLabel,
                     showTransPicker, transPickerSearch, filteredTransPicker, openTranslationPicker, selectTransPicker,
                     showLanguageModal, languageSearch, showLanguageDropdown, showRemoveLangModal, removeLangInfo,
@@ -4694,6 +4868,7 @@
                     openAddCategory, openEditCategory, closeCategoryModal, selectCatTranslation, selectCatParent, saveCategory,
                     openAddField, openEditField, closeFieldModal, selectFieldNameTrans, selectFieldPlaceholderTrans, saveField,
                     openAddOption, openEditOption, closeOptionModal, selectOptionTrans, saveOption, triggerCSVImport, importOptionsFromCSV,
+                    closeCSVImportModal, handleCSVImportFileChange, selectCSVImportTriggerOption, executeCSVImport,
                     openAddDependency, addDependency, removeDependency,
                     openOptionFilterModal, toggleOptionDependency, removeOptionDepGroup,
                     getBooleanControlledField, getAvailableBooleanControlFields,

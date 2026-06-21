@@ -368,15 +368,28 @@ The Vorschau button in the header opens a modal wizard for testing form behavior
 
 ## CSV Import (Select Field Options)
 
-An **Import** button ("Optionen" section header, between "Sortieren" and "+Option") allows bulk-importing field options from a `.csv` file.
+An **Import** button ("Optionen" section header, between "Sortieren" and "+Option") opens a modal for bulk-importing field options from a `.csv` file. The user must choose a CSV file and may optionally select a trigger option from another select field in the same category. After import, every newly imported option is automatically linked to the selected trigger option via `optionDependencies.json`, so the trigger option's existing `Optionen filtern` configuration includes all imported options. If no trigger option is selected, options are imported without creating dependencies.
 
-- `triggerCSVImport(field)` creates a temporary `<input type="file" accept=".csv">`, opens the file picker, and passes the file to `importOptionsFromCSV`.
-- `importOptionsFromCSV(file, field)` reads the file as UTF-8 text, splits by newlines, strips `"` prefix/suffix, filters empty lines, and for each row:
+- `triggerCSVImport(field)` sets the target field and opens the CSV import modal.
+- `closeCSVImportModal()` resets all CSV import state and closes the modal.
+- `handleCSVImportFileChange(e)` captures the selected file from the file input.
+- `selectCSVImportTriggerOption(optionId)` sets the selected trigger option.
+- `executeCSVImport()` validates that a file is selected, then calls `importOptionsFromCSV`.
+- `importOptionsFromCSV(file, field, triggerOptionId = null)` reads the file as UTF-8 text, splits by newlines, strips `"` prefix/suffix, filters empty lines, and for each row:
   - Generates a slug via `slugify()` (respects ä/ö/ü/ß → ae/oe/ue/ss, removes whitespace and special chars).
   - Ensures slug uniqueness within the field by appending `1`, `2`, etc. on collision.
   - Creates a German translation via `createTranslation({ de: label })`.
   - Pushes a new `fieldOptions` entry with sequential `order`.
-  - Calls `reinitSortable()` after import.
+  - Collects all imported option IDs.
+  - If a `triggerOptionId` is provided, creates `optionDependencies` entries linking the trigger option to each imported option (skipping existing pairs).
+  - Calls `reinitSortable()` and closes the modal after import.
+
+**State refs:** `showCSVImportModal`, `csvImportTargetField`, `csvImportFile`, `csvImportTriggerOptionId`, `csvImportSearch`, `csvImportError`.
+
+**Computed properties:**
+- `csvImportTargetFieldLabel` — display name of the target field.
+- `csvImportTriggerGroups` — grouped selectable options from other select fields in the same category (excluding the target field), filtered by search query.
+- `csvImportCanSubmit` — true when a CSV file is selected.
 
 ## Performance Optimizations
 
